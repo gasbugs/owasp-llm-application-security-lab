@@ -12,6 +12,15 @@ def diagnosis(problem, status, observed=None):
               "model_calls": "기록 없음", "evidence": "확인 안내"}
     if problem in SERVICES and status >= 500:
         result["log_command"] = "cd ~/owasp-llm-lab-setup-guide/llm-security-control-plane\ndocker compose --env-file .state/guided-course.env -f ../examples/security-monitoring/compose.guided.yaml logs --tail 80 " + SERVICES[problem]
+    if problem == "P17" and status >= 500:
+        result["next_action"] = "먼저 guided-loki·guided-tempo·guided-alloy가 실행 중인지 확인하세요. 모두 정상이라면 계측 코드의 Log·Metric·Trace와 request_id를 확인하세요."
+        result["log_command"] = (
+            "cd ~/owasp-llm-lab-setup-guide\n"
+            "docker compose --env-file llm-security-control-plane/.state/guided-course.env "
+            "-f examples/security-monitoring/compose.guided.yaml "
+            "-f llm-security-control-plane/.state/guided-practice-build.override.yaml "
+            "ps guided-loki guided-tempo guided-alloy guided-h17-telemetry"
+        )
     if status in (401, 403):
         result.update(cause="인증 또는 접근 권한 검사에서 요청이 거부됐습니다.",
                       next_action="화면의 세션을 갱신하고 해당 미션의 AWS 상태·호출 권한을 확인하세요.")

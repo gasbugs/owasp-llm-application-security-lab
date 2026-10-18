@@ -469,6 +469,9 @@ class GuidedControlCenterTests(unittest.TestCase):
             self.server.diagnosis("P17", 502)["file"],
             p17["source_path"],
         )
+        p17_hint = self.server.diagnosis("P17", 502)
+        self.assertIn("guided-alloy", p17_hint["next_action"])
+        self.assertIn("ps guided-loki guided-tempo guided-alloy", p17_hint["log_command"])
         self.assertEqual(self.bootstrap['course']['practices'], 23)
         self.assertEqual(self.bootstrap['course']['practice_ids'], [f'P{n:02d}' for n in range(1, 24)])
         self.assertEqual(self.bootstrap['course']['execution_ids'], {f'P{n:02d}': f'H{n:02d}' for n in range(1, 24)})
