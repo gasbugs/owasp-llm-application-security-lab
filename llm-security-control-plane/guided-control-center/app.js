@@ -2153,6 +2153,9 @@ byId("navigation-home").addEventListener("click", () => selectWorkspace("home"))
 byId("practice-reset-button").addEventListener("click", async () => {
   const button = byId("practice-reset-button");
   const status = byId("practice-reset-status");
+  const runningDialog = byId("practice-reset-running");
+  const runningDetail = byId("practice-reset-running-detail");
+  const preventResetDismiss = event => event.preventDefault();
   const endpoint = "http://127.0.0.1:28198";
   button.disabled = true;
   try {
@@ -2161,12 +2164,17 @@ byId("practice-reset-button").addEventListener("click", async () => {
     dialog.showModal();
     await new Promise(resolve => dialog.addEventListener("close", resolve, {once: true}));
     if (dialog.returnValue !== "yes") { status.textContent = "초기화를 취소했습니다."; return; }
+    runningDetail.textContent = "복원 대상을 확인하는 중입니다.";
+    runningDialog.addEventListener("cancel", preventResetDismiss);
+    runningDialog.showModal();
+    document.body.classList.add("practice-reset-locked");
     status.textContent = "초기화 대상과 보존 대상을 확인하는 중입니다.";
     const scopeResponse = await fetch(`${endpoint}/scope`, {cache: "no-store"});
     const scope = await scopeResponse.json();
     if (!scopeResponse.ok) throw new Error(scope.error || "대상 확인 실패");
     const awsCount = Object.values(scope.aws_resources).reduce((sum, count) => sum + count, 0);
     status.textContent = `복원 대상 검사 완료: 풀이 코드 ${scope.practice_files}개, 미션 컨테이너 ${scope.mission_containers}개, 전용 볼륨 ${scope.mission_volumes}개, AWS 자원 ${awsCount}개, P00 요청 파일 ${scope.p00_request ? "있음" : "없음"}, 진행 기록. 복원을 시작합니다.`;
+    runningDetail.textContent = "대상 검사를 마쳤습니다. 풀이 코드와 미션 자원을 초기 상태로 돌리는 중입니다.";
     const response = await fetch(`${endpoint}/reset`, {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({confirm: "YES"})});
     const started = await response.json();
     if (!response.ok) throw new Error(started.error || "초기화 시작 실패");
@@ -2178,6 +2186,8 @@ byId("practice-reset-button").addEventListener("click", async () => {
       if (!poll.ok) throw new Error(state.error || "진행 상태 조회 실패");
       if (state.state === "running") continue;
       if (state.state === "complete") {
+        runningDialog.close();
+        document.body.classList.remove("practice-reset-locked");
         status.textContent = "초기 상태로 복원 완료. 확인을 누르면 화면을 새로고침합니다.";
         const completeDialog = byId("practice-reset-complete");
         const reloadButton = byId("practice-reset-reload-button");
@@ -2216,6 +2226,9 @@ byId("practice-reset-button").addEventListener("click", async () => {
   } catch (error) {
     status.textContent = `초기화 실패: ${error.message}. 남은 상태를 확인한 뒤 다시 시도하세요.`;
   } finally {
+    if (runningDialog.open) runningDialog.close();
+    runningDialog.removeEventListener("cancel", preventResetDismiss);
+    document.body.classList.remove("practice-reset-locked");
     button.disabled = false;
   }
 });
