@@ -51,6 +51,31 @@ test('each successful verification replays celebration and an incomplete result 
   assert.equal(ctx.completedPractices.has('P02'), true);
 });
 
+test('single-mission reset clears only that mission grading display', () => {
+  const saved = new Map([
+    ['guided-grading-result-P17', 'old-p17'],
+    ['guided-grading-result-P18', 'kept-p18'],
+  ]);
+  const ctx = {
+    missionOrder: ['P17', 'P18'], missionResults: new Map([['P17', {}], ['P18', {}]]),
+    currentMissionResetGenerations: new Map(),
+    sessionStorage: {
+      getItem: key => saved.get(key) ?? null,
+      setItem: (key, value) => saved.set(key, value),
+      removeItem: key => saved.delete(key),
+    },
+  };
+  vm.runInNewContext(source.slice(source.indexOf('function syncMissionResetGenerations('),
+    source.indexOf('function restoreGradingResults(')), ctx);
+  assert.equal(ctx.syncMissionResetGenerations({P17: 'first'}), false);
+  assert.equal(saved.has('guided-grading-result-P17'), false);
+  assert.equal(saved.get('guided-grading-result-P18'), 'kept-p18');
+  assert.equal(ctx.missionResults.has('P18'), true);
+  saved.set('guided-grading-result-P17', 'new-p17');
+  assert.equal(ctx.syncMissionResetGenerations({P17: 'second'}), true);
+  assert.equal(saved.has('guided-grading-result-P17'), false);
+});
+
 test('comparison requires a graded execution and never includes response text', () => {
   const sample = {activity_id: 'P01', execution_id: 'a', verified_by: 'verifier', task_completed: true, course_verdict: 'PASS', prompt: 'private'};
   assert.equal(learning.verificationSummary({...sample, execution_id: undefined}), null);

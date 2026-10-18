@@ -24,6 +24,20 @@ class ProgressStore:
             return self.db.execute('SELECT value FROM installation_meta WHERE key=?',
                                    ('reset_generation',)).fetchone()[0]
 
+    def mission_reset_generations(self):
+        with self.lock:
+            rows = self.db.execute("SELECT key, value FROM installation_meta WHERE key GLOB 'mission_reset_P[0-9][0-9]'")
+            return {row['key'].removeprefix('mission_reset_'): row['value'] for row in rows}
+
+    def reset_mission(self, problem):
+        if not re.fullmatch(r'P\d{2}', problem):
+            raise ValueError('invalid mission')
+        with self.lock, self.db:
+            self.db.execute('DELETE FROM progress WHERE problem=?', (problem,))
+            self.db.execute('INSERT INTO installation_meta(key,value) VALUES (?,?) '
+                            'ON CONFLICT(key) DO UPDATE SET value=excluded.value',
+                            ('mission_reset_' + problem, uuid.uuid4().hex))
+
     def tutorial_completed(self, owner):
         with self.lock, self.db:
             self.db.execute('CREATE TABLE IF NOT EXISTS tutorial_completion (owner TEXT PRIMARY KEY)')

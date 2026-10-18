@@ -38,6 +38,23 @@ class ProgressTests(unittest.TestCase):
         self.assertNotIn('secret', str(reopened.history()))
         self.assertEqual(len(reopened.history()), 1)
 
+    def test_reset_one_mission_preserves_other_completion_and_publishes_its_generation(self):
+        self.complete('P17')
+        self.complete('P18')
+        before = self.store.reset_generation()
+        self.store.reset_mission('P17')
+        self.assertEqual([row['problem'] for row in self.store.history()], ['P18'])
+        self.assertEqual(self.store.reset_generation(), before)
+        generation = self.store.mission_reset_generations()['P17']
+        self.assertEqual(len(generation), 32)
+        self.assertEqual(self.client.get('/api/bootstrap').json()['mission_reset_generations'], {'P17': generation})
+        self.assertEqual(self.client.get('/api/progress').json()['mission_reset_generations'], {'P17': generation})
+        with self.assertRaises(ValueError):
+            self.store.reset_mission('P17; DELETE FROM progress')
+        reopened = self.server.ProgressStore(self.path)
+        self.addCleanup(reopened.db.close)
+        self.assertEqual(reopened.mission_reset_generations(), {'P17': generation})
+
     def test_p00_persists_for_signed_browser_after_server_restart(self):
         token = self.client.get('/api/bootstrap').json()['p00_submission_token']
         response = self.client.post('/api/practice/P00/check', headers={'Authorization': 'Bearer ' + token},

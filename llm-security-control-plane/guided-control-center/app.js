@@ -35,6 +35,7 @@ try { sidebarPinned = localStorage.getItem("guided-sidebar-pinned") === "true"; 
 const rawResponses = new WeakMap();
 const missionResults = new Map();
 let currentResetGeneration = null;
+const currentMissionResetGenerations = new Map();
 let executionPending = false;
 let executionTimer = null;
 const themePreference = window.matchMedia("(prefers-color-scheme: dark)");
@@ -117,6 +118,30 @@ function syncResetGeneration(generation, reloadOnChange = false) {
   try { sessionStorage.setItem(key, generation); } catch {}
   if (reloadOnChange && changedDuringPage) location.reload();
   return reloadOnChange && changedDuringPage;
+}
+
+function syncMissionResetGenerations(generations) {
+  if (!generations || typeof generations !== "object" || Array.isArray(generations)) return false;
+  let changedDuringPage = false;
+  for (const [problem, generation] of Object.entries(generations)) {
+    if (!missionOrder.includes(problem) || typeof generation !== "string" || !generation) continue;
+    const key = `guided-mission-reset-${problem}`;
+    let previous = null;
+    try { previous = sessionStorage.getItem(key); } catch {}
+    const current = currentMissionResetGenerations.get(problem);
+    if (current === generation || previous === generation) {
+      currentMissionResetGenerations.set(problem, generation);
+      continue;
+    }
+    if (current) changedDuringPage = true;
+    try {
+      sessionStorage.removeItem(`guided-grading-result-${problem}`);
+      sessionStorage.setItem(key, generation);
+    } catch {}
+    missionResults.delete(problem);
+    currentMissionResetGenerations.set(problem, generation);
+  }
+  return changedDuringPage;
 }
 
 function restoreGradingResults() {
@@ -403,6 +428,10 @@ async function restorePracticeProgress() {
     const payload = await response.json();
     if (revision !== progressRequest || executionPending) return;
     if (syncResetGeneration(payload.reset_generation, true)) return;
+    if (syncMissionResetGenerations(payload.mission_reset_generations)) {
+      location.reload();
+      return;
+    }
     completedPractices.clear();
     recheckPractices.clear();
     for (const record of payload.records || []) {
@@ -1999,6 +2028,7 @@ async function bootstrap() {
   prepareCopyableBlocks();
   applyMissionDisplayLabels();
   syncResetGeneration(payload.reset_generation);
+  syncMissionResetGenerations(payload.mission_reset_generations);
   restoreGradingResults();
   selectTab(0);
   selectWorkspace("home");
