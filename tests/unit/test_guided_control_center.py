@@ -463,6 +463,12 @@ class GuidedControlCenterTests(unittest.TestCase):
         self.assertEqual(self.bootstrap['workspace'], 'practice')
         p02 = next(item for item in self.bootstrap["learner_apps"] if item["hands_on_id"] == "H02")
         self.assertEqual(p02["source_path"], "llm-security-control-plane/guided-labs/h02-document-ingestion/learner.py")
+        p17 = next(item for item in self.bootstrap["learner_apps"] if item["hands_on_id"] == "H17")
+        self.assertEqual(p17["source_path"], "~/owasp-llm-practice/P06-01_instrumentation.py")
+        self.assertEqual(
+            self.server.diagnosis("P17", 502)["file"],
+            p17["source_path"],
+        )
         self.assertEqual(self.bootstrap['course']['practices'], 23)
         self.assertEqual(self.bootstrap['course']['practice_ids'], [f'P{n:02d}' for n in range(1, 24)])
         self.assertEqual(self.bootstrap['course']['execution_ids'], {f'P{n:02d}': f'H{n:02d}' for n in range(1, 24)})

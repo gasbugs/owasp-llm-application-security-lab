@@ -531,7 +531,7 @@ def bootstrap(session: tuple[str, dict] = Depends(require_session)) -> dict:
             {"hands_on_id": "H14", "service": "guided-h14-garak", "source_path": "llm-security-control-plane/guided-labs/h14-garak/garak-config.yaml"},
             {"hands_on_id": "H15", "service": "guided-h15-pyrit", "source_path": "llm-security-control-plane/guided-labs/h15-pyrit/attack.py"},
             {"hands_on_id": "H16", "service": "guided-h16-policy-promotion", "source_path": "llm-security-control-plane/guided-labs/h16-policy-promotion/policy.py"},
-            {"hands_on_id": "H17", "service": "guided-h17-telemetry", "source_path": "llm-security-control-plane/guided-labs/h17-telemetry/instrumentation.py"},
+            {"hands_on_id": "H17", "service": "guided-h17-telemetry", "source_path": "~/owasp-llm-practice/P06-01_instrumentation.py"},
             {"hands_on_id": "H18", "service": "guided-h18-queries", "source_path": "llm-security-control-plane/guided-labs/h18-product-queries/queries.yaml"},
             {"hands_on_id": "H19", "service": "guided-h19-investigation", "source_path": "llm-security-control-plane/guided-labs/h19-incident-investigation/investigation.py"},
             {"hands_on_id": "H20", "service": "guided-h20-alerts", "source_path": "llm-security-control-plane/guided-labs/h20-alert-dashboard/rules.yaml"},
