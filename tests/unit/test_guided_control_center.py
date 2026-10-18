@@ -469,6 +469,32 @@ class GuidedControlCenterTests(unittest.TestCase):
             self.server.diagnosis("P17", 502)["file"],
             p17["source_path"],
         )
+        for hands_on, learner in (
+            ("H18", "P06-02_queries.yaml"),
+            ("H19", "P06-03_investigation.py"),
+            ("H20", "P06-04_rules.yaml"),
+            ("H21", "P07-01_policy.py"),
+            ("H22", "P07-02_server.py"),
+        ):
+            app = next(item for item in self.bootstrap["learner_apps"] if item["hands_on_id"] == hands_on)
+            expected = "~/owasp-llm-practice/" + learner
+            self.assertEqual(app["source_path"], expected)
+            self.assertEqual(self.server.diagnosis("P" + hands_on[1:], 502)["file"], expected)
+        html = (CONTROL / "guided-control-center/index.html").read_text()
+        for learner, build_target in (
+            ("P06-01_instrumentation.py", "h17-telemetry/instrumentation.py"),
+            ("P06-02_queries.yaml", "h18-product-queries/queries.yaml"),
+            ("P06-03_investigation.py", "h19-incident-investigation/investigation.py"),
+            ("P06-04_rules.yaml", "h20-alert-dashboard/rules.yaml"),
+            ("P06-04_dashboard.json", "h20-alert-dashboard/dashboard.json"),
+            ("P07-01_policy.py", "h21-agent-policy/policy.py"),
+            ("P07-02_server.py", "h22-mcp-approval/server.py"),
+        ):
+            self.assertIn(
+                f"install -m 0644 ~/owasp-llm-practice/{learner} "
+                f".state/guided-practice-build/guided-labs/{build_target}",
+                html,
+            )
         p17_hint = self.server.diagnosis("P17", 502)
         self.assertIn("guided-alloy", p17_hint["next_action"])
         self.assertIn("ps guided-loki guided-tempo guided-alloy", p17_hint["log_command"])
