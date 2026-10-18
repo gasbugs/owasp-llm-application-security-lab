@@ -50,11 +50,9 @@ def authorize(
     # 정책 위반 조건으로 바꾸세요. if/raise 구조는 그대로 사용합니다.
     if False:
         raise PolicyDenied("agent boundary denied")
-    # TODO 3: 아래 False를 요청 횟수·결과 bytes·timeout의 한도 초과
-    # 조건으로 바꾸세요.
-    if False:
-        raise PolicyDenied("agent limit exceeded")
-    # TODO 4: 요청값 대신 configured의 세 상한을 Admission에 넣으세요.
+    # TODO 3: 요청값이 정책 상한보다 커도 여기서 일괄 거부하지 않습니다.
+    # Host가 아래 Admission의 서버 상한으로 실제 호출·결과·시간을 제한합니다.
+    # 요청값 대신 configured의 세 상한을 Admission에 넣으세요.
     return Admission(
         principal=principal,
         model=model,

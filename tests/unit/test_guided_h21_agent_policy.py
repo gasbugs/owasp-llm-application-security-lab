@@ -44,6 +44,16 @@ class GuidedH21PolicyTests(unittest.TestCase):
         self.assertEqual(policy.POLICIES["support-agent"]["max_result_bytes"], 160)
         self.assertEqual(policy.POLICIES["support-agent"]["tool_timeout_ms"], 250)
 
+    def test_learner_fix_fixture_matches_starter_and_preserves_runtime_caps(self):
+        from tests.e2e.run_guided_h01_h04_h21_h22_learner_fixes import ACTIVITIES
+
+        starter = (LAB / "policy.py").read_text(encoding="utf-8")
+        before, after = ACTIVITIES["H21"]["replacements"][0]
+        self.assertIn(before, starter)
+        self.assertIn('max_tool_calls=configured["max_tool_calls"]', after)
+        self.assertNotIn('requested_result_bytes >', after)
+        self.assertNotIn('requested_timeout_ms >', after)
+
     def test_host_uses_real_mcp_client_and_server_owned_cases(self):
         source = (LAB / "host.py").read_text(encoding="utf-8")
         self.assertIn("async with Client(SERVER_URLS[admission.server_id]", source)
