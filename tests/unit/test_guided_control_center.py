@@ -498,6 +498,9 @@ class GuidedControlCenterTests(unittest.TestCase):
         p17_hint = self.server.diagnosis("P17", 502)
         self.assertIn("guided-alloy", p17_hint["next_action"])
         self.assertIn("ps guided-loki guided-tempo guided-alloy", p17_hint["log_command"])
+        self.assertIn("정규화된 bundle", self.server.diagnosis("P19", 502)["next_action"])
+        self.assertIn("Admission에 서버 상한 2·160·250", self.server.diagnosis("P21", 502)["next_action"])
+        self.assertNotIn("승인 전 실행 차단", self.server.diagnosis("P21", 502)["next_action"])
         self.assertEqual(self.bootstrap['course']['practices'], 23)
         self.assertEqual(self.bootstrap['course']['practice_ids'], [f'P{n:02d}' for n in range(1, 24)])
         self.assertEqual(self.bootstrap['course']['execution_ids'], {f'P{n:02d}': f'H{n:02d}' for n in range(1, 24)})
@@ -1676,6 +1679,15 @@ class GuidedControlCenterTests(unittest.TestCase):
         for solution in ('logql:', 'promql:', 'sum(', 'max by ('):
             self.assertNotIn(solution, problem)
         self.assertNotIn('docker compose build', problem)
+        self.assertIn('위 작업 파일을 수정한 뒤 setup 작업 경로에서', problem)
+        self.assertNotIn('setup 저장소에서 수정한 뒤', problem)
+
+    def test_p22_case_count_matches_host(self):
+        html = (CONTROL / "guided-control-center/index.html").read_text(encoding="utf-8")
+        problem = html.split('<div id="h22-work"', 1)[1].split('<section class="inspection"', 1)[0]
+        host = (CONTROL / "guided-labs/h22-mcp-approval/host.py").read_text(encoding="utf-8")
+        self.assertIn('일곱 가지 요청', problem)
+        self.assertIn("CASE_ORDER=['normal','no-approval','self-approval','changed-args','expired','approved','reuse']", host)
 
     def test_p19_problem_has_function_contract_not_answer_constant(self):
         html = (CONTROL / "guided-control-center/index.html").read_text(encoding="utf-8")
