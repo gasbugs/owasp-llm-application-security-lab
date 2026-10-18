@@ -57,7 +57,7 @@ with sync_playwright() as playwright:
     assert page.evaluate("document.body.classList.contains('practice-reset-locked')")
     assert not page.locator("#practice-reset-running-progress").get_attribute("value")
     try:
-        page.locator("#home-tutorial").click(timeout=500)
+        page.locator("#home-next").click(timeout=500)
     except PlaywrightTimeoutError:
         pass
     else:

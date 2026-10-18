@@ -365,7 +365,7 @@ function renderHomeProgress() {
   setText("practice-progress-count", `${count} / ${total}`);
   byId("practice-progress").max = total;
   byId("practice-progress").value = count;
-  const next = missionOrder.filter(id => id !== "P00").find(id => !completedPractices.has(id));
+  const next = !p00Completed ? "P00" : missionOrder.find(id => id !== "P00" && !completedPractices.has(id));
   setText("home-next", next ? `${missionLabel(next)} ${recheckPractices.has(next) ? "재검증하기" : "시작하기"}` : "미션 목록 보기");
   byId("home-next").dataset.problem = next || "";
   const grid = byId("home-missions");
@@ -2232,10 +2232,10 @@ byId("practice-reset-button").addEventListener("click", async () => {
     button.disabled = false;
   }
 });
-byId("home-tutorial").addEventListener("click", () => selectWorkspace("tutorial"));
 byId("home-next").addEventListener("click", () => {
   const problem = byId("home-next").dataset.problem;
-  if (problem) selectTab(practiceGroups.findIndex(group => group.includes(problem)), problem);
+  if (problem === "P00") selectWorkspace("tutorial");
+  else if (problem) selectTab(practiceGroups.findIndex(group => group.includes(problem)), problem);
   else setMissionMenu(true);
 });
 for (const [index, name] of ["model", "grade"].entries()) {
