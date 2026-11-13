@@ -18,10 +18,10 @@ function completionHarness() {
   return {ctx, celebrated};
 }
 
-test('P04-05 states the Analyzer and recognizer language contract', () => {
-  assert.match(controlCenterHtml, /Analyzer는 <code>LANGUAGE = "en"<\/code>으로 실행됩니다/);
-  assert.match(controlCenterHtml, /<code>supported_language<\/code>를 현재 <code>LANGUAGE<\/code>와 같게 지정해야 합니다/);
-  assert.match(controlCenterHtml, /Registry 목록에는 보여도 영어 분석 요청에는 참여하지 않아/);
+test('P04-05 explains the recognizer and actual redacted output', () => {
+  assert.match(controlCenterHtml, /공식 <code>KrRrnRecognizer<\/code>를 사용해/);
+  assert.match(controlCenterHtml, /가린 문자열을 실제 전달값으로 선택합니다/);
+  assert.match(controlCenterHtml, /다음 서비스가 실제로 받은 문자열이 채점 대상입니다/);
 });
 
 test('completion celebration needs the requested problem and a verified completed result', () => {
@@ -97,12 +97,33 @@ test('unavailable progress demotes old marks and a late refresh cannot overwrite
   await state.restorePracticeProgress();
   assert.equal(state.completedPractices.has('P02'), true);
 });
-test('failure guidance does not infer causes from arbitrary text', () => {
-  assert.equal(learning.failureCategory({http_status: 422}), '입력');
-  assert.equal(learning.failureCategory({http_status: 501}), '구현');
-  assert.equal(learning.failureCategory({failure_category: 'evidence'}), '증거');
-  assert.match(learning.failureCategory({error: 'AWS access denied'}), /미분류/);
+test('failure guidance uses the verified case reason and next action', () => {
+  const values = new Map();
+  const panels = new Map();
+  const ctx = {
+    byId: id => {
+      if (!panels.has(id)) panels.set(id, {hidden: false});
+      return panels.get(id);
+    },
+    setText: (id, value) => values.set(id, value),
+  };
+  vm.runInNewContext(source.slice(source.indexOf('function renderLearningSupport('),
+    source.indexOf('function renderError(')), ctx);
+  ctx.renderLearningSupport({
+    course_verdict: 'ERR',
+    reason: 'general error',
+    result: {cases: [{case_id: 'risk-input', status: 'ERR', reason: 'specific failure'}]},
+    diagnosis: {stopped_stage: 'guard', next_action: 'check guard policy'},
+  });
+  assert.equal(values.get('failure-category'), '실패한 사례: risk-input');
+  assert.equal(values.get('failure-cause'), 'specific failure');
+  assert.equal(values.get('failure-stage'), '멈춘 단계: guard');
+  assert.equal(values.get('failure-action'), '수정·재확인: check guard policy');
+  ctx.renderLearningSupport({course_verdict: 'ERR', error: 'AWS access denied'});
+  assert.equal(values.get('failure-cause'), 'AWS access denied');
+  assert.equal(values.get('failure-category'), '현재 실행에서 오류가 발생했습니다.');
 });
+
 vm.runInNewContext(source.slice(source.indexOf("function formatRawJson("), source.indexOf("async function request(")), context);
 
 test("transport failure is ERR without invented downstream evidence", () => {
