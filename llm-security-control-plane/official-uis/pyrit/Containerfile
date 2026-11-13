@@ -5,7 +5,7 @@ ENV PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
     HOME=/tmp
 
-RUN python -m pip install "pyrit==${PYRIT_VERSION}"
+RUN python -m pip install "pyrit==${PYRIT_VERSION}" "aiohttp==3.12.15"
 COPY --chown=65532:65532 official-uis/pyrit/pyrit-conf.yaml /app/pyrit-conf.yaml
 
 USER 65532:65532

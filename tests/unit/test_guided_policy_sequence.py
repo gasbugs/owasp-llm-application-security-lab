@@ -16,6 +16,6 @@ class PolicySequenceTests(unittest.TestCase):
                     'verified_by':'guided-evidence-verifier','course_verdict':'HIT' if failed else 'PASS',
                     'case_verified':not failed,'task_completed':False,'reason':'fixture','result':{'cases':[{'case_id':name,'decision':'allow'}]}})
         with patch.object(server.httpx,'AsyncClient',return_value=Client()):result=asyncio.run(server.run_policy_checks('http://worker','token'))
-        self.assertEqual([x['status'] for x in result['result']['cases']],['PASS','PASS','HIT','미실행','미실행'])
+        self.assertEqual([x['status'] for x in result['result']['cases']],['PASS','PASS','HIT']+['미실행']*4)
         self.assertEqual(len(calls),6)
         self.assertFalse(any('promote' in x for x in calls))

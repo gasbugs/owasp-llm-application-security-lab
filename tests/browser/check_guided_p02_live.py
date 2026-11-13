@@ -27,7 +27,7 @@ def main():
             page.locator('#home-missions .home-mission[data-problem="P02"]').click()
             page.locator('#h23-grade-tab').click()
             assert page.locator("html").get_attribute("data-theme") == "dark"
-            assert "learner.py" in page.locator("#h02-work").inner_text()
+            assert "learner.py" in page.locator("#h02-work").text_content()
             with page.expect_response(lambda response: response.url.endswith("/api/practice/P02/verify"), timeout=240000) as pending:
                 page.locator("#h02-verify").click()
             response = pending.value
@@ -54,8 +54,8 @@ def main():
             assert rejected == 422
             for width in (1440, 390):
                 page.set_viewport_size({"width": width, "height": 1000})
-                page.locator('#h23-experience-tab').click()
-                expect(page.locator('#h02-provision')).to_be_visible()
+                page.locator('#h23-build-tab').click()
+                expect(page.locator('.block-lab-resource-actions button').filter(has_text='자원 준비')).to_be_visible()
                 assert page.locator('#h02-provision').get_attribute('title') == 'AWS 자원 준비'
                 page.locator('#h23-grade-tab').click()
                 for action in ("h02-verify",):
@@ -74,6 +74,7 @@ def main():
                     help_button.press("Escape")
                     assert help_button.evaluate("(button) => button.closest('.action-control').classList.contains('tip-dismissed')") is True
                     help_button.evaluate("(button) => button.blur()")
+                page.locator('#h23-build-tab').click()
                 page.locator("#h02-work").scroll_into_view_if_needed()
                 page.screenshot(path=str(args.output.with_suffix(f".{width}.png")))
             for theme in ("light", "dark"):

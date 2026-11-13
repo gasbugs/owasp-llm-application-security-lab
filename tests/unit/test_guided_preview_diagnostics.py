@@ -11,9 +11,13 @@ from diagnostics import diagnosis,FILES,CHECKS,SERVICES
 class DiagnosticsTest(unittest.TestCase):
     def test_all_missions_have_existing_edit_file_and_action(self):
         self.assertEqual(set(FILES), {f"P{n:02d}" for n in range(24)})
+        workspace_files = {line.split("|")[2] for line in (ROOT / "tools/guided-practice-files.tsv").read_text().splitlines() if line and not line.startswith("#")}
         for mission,path in FILES.items():
             if mission != "P00":
-                self.assertTrue((ROOT/path.removeprefix("~/owasp-llm-lab-setup-guide/")).is_file(),mission)
+                if path.startswith("~/owasp-llm-practice/"):
+                    self.assertIn(path.removeprefix("~/owasp-llm-practice/"), workspace_files, mission)
+                else:
+                    self.assertTrue((ROOT/path.removeprefix("~/owasp-llm-lab-setup-guide/")).is_file(),mission)
             hint=diagnosis(mission,502)
             self.assertEqual(hint["model_calls"],"기록 없음")
             self.assertTrue(hint["next_action"])

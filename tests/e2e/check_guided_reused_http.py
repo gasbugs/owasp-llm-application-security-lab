@@ -126,6 +126,11 @@ def main():
                     elif name == "guided-control-center" and mount["target"] == "/block-build-jobs":
                         target = workspace / "block-build-jobs"
                         target.mkdir(exist_ok=True)
+                    elif mount["target"].startswith("/app/") and "build" in service:
+                        dockerfile = Path(service["build"]["dockerfile"])
+                        target = context / dockerfile.parent / mount["target"].removeprefix("/app/")
+                        if not target.is_file():
+                            raise RuntimeError("missing isolated learner mount: " + str(target))
                     else:
                         raise RuntimeError("unreviewed bind mount in selected service: " + name)
                     mount["source"] = str(target)
@@ -139,7 +144,12 @@ def main():
         command = ["docker", "compose", "--env-file", "/dev/null", "-f", str(compose_path)]
 
         def compose(*arguments):
-            subprocess.run(command + list(arguments), env=env, check=True)
+            try:
+                subprocess.run(command + list(arguments), env=env, check=True)
+            except subprocess.CalledProcessError:
+                subprocess.run(command + ["ps", "--all"], env=env, check=False)
+                subprocess.run(command + ["logs", "--tail", "60"], env=env, check=False)
+                raise
 
         def verify(activity, variant):
             public = "P" + activity[1:]

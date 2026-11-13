@@ -70,7 +70,7 @@ class ProgressTests(unittest.TestCase):
         self.assertNotIn('received', restored)
         other = TestClient(self.server.app)
         other.get('/')
-        self.assertFalse(other.get('/api/practice/P00/result').json()['completed'])
+        self.assertTrue(other.get('/api/practice/P00/result').json()['completed'])
         self.assertEqual(reopened.history(), [])
 
     def test_only_verified_completion_is_saved(self):

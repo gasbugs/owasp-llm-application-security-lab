@@ -115,7 +115,8 @@ class GuidedDeploymentIsolationTests(unittest.TestCase):
         services = self.compose["services"]
         learner = services["guided-h03-sync-app"]
         self.assertEqual(learner["environment"]["GUIDED_H03_DATABASE"], "/state/p03-receipts.sqlite3")
-        self.assertEqual(learner["volumes"], ["guided-h03-receipts:/state:rw"])
+        self.assertEqual(learner["volumes"][0], "guided-h03-receipts:/state:rw")
+        self.assertIn("/app/learner.py:ro", learner["volumes"][1])
         self.assertIn("guided-h03-receipts", self.compose["volumes"])
         self.assertFalse(learner.get("ports"))
         for name, service in services.items():
@@ -145,7 +146,8 @@ class GuidedDeploymentIsolationTests(unittest.TestCase):
         services = self.compose['services']
         learner = services['guided-h04-guardrail-app']
         self.assertEqual(learner['environment']['GUIDED_H04_DATABASE'], '/state/p04-receipts.sqlite3')
-        self.assertEqual(learner['volumes'], ['guided-h04-receipts:/state:rw'])
+        self.assertEqual(learner['volumes'][0], 'guided-h04-receipts:/state:rw')
+        self.assertIn('/app/learner.py:ro', learner['volumes'][1])
         self.assertIn('guided-h04-receipts', self.compose['volumes'])
         self.assertFalse(learner.get('ports'))
         for name, service in services.items():

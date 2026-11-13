@@ -381,10 +381,12 @@ class GuidedControlCenterTests(unittest.TestCase):
             with self.subTest(problem=number):
                 self.assertIn('class="mission-brief"', section)
                 self.assertIn('미션 해결 조건', section)
-                self.assertIn('코드 적용하기', section)
+                if number not in (2, 3, 4):
+                    self.assertIn('코드 적용하기', section)
                 self.assertIn('~/owasp-llm-practice/', section)
-                self.assertIn('install -m 0644 ~/owasp-llm-practice/', section)
-                self.assertIn('.state/guided-practice-build/', section)
+                if number not in (2, 3, 4):
+                    self.assertIn('install -m 0644 ~/owasp-llm-practice/', section)
+                    self.assertIn('.state/guided-practice-build/', section)
                 self.assertIn('미션 채점', section)
 
     def test_problem_conditions_are_direct_and_include_required_values(self):
@@ -645,7 +647,7 @@ class GuidedControlCenterTests(unittest.TestCase):
         expected.update(f"/api/practice/P{number:02d}/delete-resources" for number in (2, 3, 4))
         expected.update({"/api/practice/P01/chat", "/api/practice/P23/chat"})
         actual = {path for path in routes if path.startswith("/api/practice/")}
-        self.assertEqual(actual, expected | {"/api/practice/P00/check", "/api/practice/P00/result", "/api/practice/P04/chat"})
+        self.assertEqual(actual, expected | {"/api/practice/P00/check", "/api/practice/P00/result", "/api/practice/P04/chat", "/api/practice/P23/submit-blocks"})
         self.assertEqual(len(legacy), len(expected) - 5)
         for path, route in legacy.items():
             alias = path.replace("/api/hands-on/H", "/api/practice/P", 1)
@@ -664,9 +666,10 @@ class GuidedControlCenterTests(unittest.TestCase):
                     continue
                 with self.subTest(path=route.path):
                     self.assertEqual(anonymous.post(route.path, headers=self.headers).status_code, 401)
-                    self.assertEqual(self.client.post(route.path).status_code, 403)
+                    body = {"order": ["invalid"]} if route.path.endswith("/submit-blocks") else None
+                    self.assertEqual(self.client.post(route.path, json=body).status_code, 403)
                     self.assertEqual(self.client.post(
-                        route.path, headers={**self.headers, "Origin": "https://evil.example"}
+                        route.path, headers={**self.headers, "Origin": "https://evil.example"}, json=body
                     ).status_code, 403)
                     self.assertEqual(self.client.post(
                         route.path, headers=self.headers,
@@ -1416,7 +1419,7 @@ class GuidedControlCenterTests(unittest.TestCase):
         self.assertEqual(set(prepare['json']),{'suite_id','started_at'})
         self.assertEqual(run['json']['case_id'],'0-collected')
         self.assertFalse(response.json()['task_completed'])
-        self.assertEqual([c['status'] for c in response.json()['result']['cases']],['ERR']+['미실행']*9)
+        self.assertEqual([c['status'] for c in response.json()['result']['cases']],['ERR']+['미실행']*11)
 
     def test_unknown_host_is_rejected(self):
         response = self.client.get("/", headers={"Host": "attacker.example"})
@@ -1475,7 +1478,7 @@ class GuidedControlCenterTests(unittest.TestCase):
                     self.assertEqual(detail['activity_id'], 'P19')
                     self.assertFalse(detail['task_completed'])
                     self.assertEqual(detail['course_verdict'], 'ERR')
-                    self.assertEqual([c['status'] for c in detail['result']['cases']],['ERR']+['미실행']*9)
+                    self.assertEqual([c['status'] for c in detail['result']['cases']],['ERR']+['미실행']*11)
                     self.assertNotIn('downstream_called', detail)
                     self.assertEqual(len(FakeAsyncClient.calls), 1 if failure_at == 'learner_execution' else 3)
                     self.assertEqual(self.client.get('/readyz').status_code, 200)

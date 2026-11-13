@@ -80,7 +80,8 @@ class GuidedInstallerTests(unittest.TestCase):
         for display_id, _source, workspace_name, _services in rows:
             with self.subTest(display_id=display_id, workspace_name=workspace_name):
                 self.assertIn(f"vi ~/owasp-llm-practice/{workspace_name}", html)
-                self.assertIn(f"install -m 0644 ~/owasp-llm-practice/{workspace_name} .state/guided-practice-build/{_source}", html)
+                if display_id not in {"P01-02", "P01-03", "P02-01"}:
+                    self.assertIn(f"install -m 0644 ~/owasp-llm-practice/{workspace_name} .state/guided-practice-build/{_source}", html)
         self.assertNotIn(
             "vi ~/owasp-llm-lab-setup-guide/llm-security-control-plane/guided-labs/",
             html,

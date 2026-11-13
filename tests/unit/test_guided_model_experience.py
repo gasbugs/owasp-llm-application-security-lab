@@ -18,7 +18,9 @@ class Experience(unittest.TestCase):
             self.m=importlib.util.module_from_spec(spec);spec.loader.exec_module(self.m)
         self.client=TestClient(self.m.app)
         self.headers={"Authorization":"Bearer "+self.m.CONTROL}
-    def send(self,body):return self.client.post("/v1/chat",json=body,headers=self.headers)
+    def send(self,body):
+        with patch.object(self.m.importlib, "reload", return_value=self.m.learner):
+            return self.client.post("/v1/chat",json=body,headers=self.headers)
     def test_authentication(self):self.assertEqual(self.client.post("/v1/chat",json={"message":"hi"}).status_code,401)
     def test_browser_cannot_claim_verdict(self):self.assertEqual(self.send({"message":"hi","task_completed":True}).status_code,422)
     def test_starter(self):

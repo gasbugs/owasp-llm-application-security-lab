@@ -55,8 +55,12 @@ class ApplyGuidanceTests(unittest.TestCase):
                 continue
             display, source, workspace, services = line.split("|")
             rows.setdefault(display, []).append((source, workspace, services.split(",")))
-        self.assertEqual(len(parser.blocks), len(rows))
+        block_submitted = {"P01-02", "P01-03", "P02-01"}
+        self.assertEqual(len(parser.blocks), len(rows) - len(block_submitted))
         for display, entries in rows.items():
+            if display in block_submitted:
+                self.assertIn(f"vi ~/owasp-llm-practice/{entries[0][1]}", html)
+                continue
             matches = [block for block in parser.blocks if f"~/owasp-llm-practice/{entries[0][1]}" in block]
             self.assertEqual(len(matches), 1, display)
             block = matches[0]

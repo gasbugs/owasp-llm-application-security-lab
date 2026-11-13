@@ -28,10 +28,11 @@ def main():
             page.locator('#home-missions .home-mission[data-problem="P04"]').click()
             page.locator('#h23-grade-tab').click()
             assert page.locator('html').get_attribute('data-theme') == 'dark'
-            assert 'invoke_guarded' in page.locator('#h04-work').inner_text()
+            assert 'invoke_guarded' in page.locator('#h04-work').text_content()
             if args.prepare_aws:
+                page.locator('#h23-build-tab').click()
                 with page.expect_response(lambda r: r.url.endswith('/api/practice/P04/provision'), timeout=510000) as pending_preparation:
-                    page.locator('#h04-provision').click()
+                    page.locator('.block-lab-resource-actions button').filter(has_text='자원 준비').click()
                 preparation_response = pending_preparation.value
                 preparation = preparation_response.json()
                 args.output.with_suffix('.preparation.json').write_text(json.dumps(preparation, ensure_ascii=False, indent=2))
@@ -39,6 +40,7 @@ def main():
                 assert preparation['task_completed'] is False and 'security_verdict' not in preparation
                 expect(page.locator('#task-completion')).to_have_text('P04 과제: 미완료')
                 assert json.loads(page.locator('#raw').text_content()) == preparation
+                page.locator('#h23-grade-tab').click()
             with page.expect_response(lambda r: r.url.endswith('/api/practice/P04/verify'), timeout=240000) as pending:
                 page.locator('#h04-verify').click()
             response = pending.value
@@ -65,8 +67,8 @@ def main():
             assert rejected == 422
             for width in (1440, 390):
                 page.set_viewport_size({'width': width, 'height': 1000})
-                page.locator('#h23-experience-tab').click()
-                expect(page.locator('#h04-provision')).to_be_visible()
+                page.locator('#h23-build-tab').click()
+                expect(page.locator('.block-lab-resource-actions button').filter(has_text='자원 준비')).to_be_visible()
                 assert page.locator('#h04-provision').get_attribute('title') == 'AWS 자원 준비'
                 page.locator('#h23-grade-tab').click()
                 for action in ('h04-verify',):
@@ -85,6 +87,8 @@ def main():
                     button.press('Escape')
                     assert button.evaluate("(button) => button.closest('.action-control').classList.contains('tip-dismissed')") is True
                     button.evaluate("(button) => button.blur()")
+                page.locator('#h23-build-tab').click()
+                page.locator('#h04-work details').evaluate_all('items => items.forEach(item => item.open = true)')
                 page.locator('#h04-code-title').scroll_into_view_if_needed()
                 page.screenshot(path=str(args.output.with_suffix(f'.{width}.png')))
             for theme in ('light', 'dark'):
