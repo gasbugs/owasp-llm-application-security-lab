@@ -1195,6 +1195,30 @@ async function request(path, body = undefined) {
   return payload;
 }
 
+function gradeButtonId(problem) {
+  if (!/^P\d{2}$/.test(problem || "")) return null;
+  return problem === "P00" ? "tutorial-grade-check" : problem === "P01" ? "verify" : `h${problem.slice(1)}-verify`;
+}
+
+function setGradeBusy(problem, busy) {
+  const id = gradeButtonId(problem);
+  if (!id) return;
+  const button = byId(id);
+  let indicator = byId(`${id}-indicator`);
+  if (!indicator) {
+    indicator = document.createElement("span");
+    indicator.id = `${id}-indicator`;
+    indicator.className = "grade-indicator";
+    indicator.setAttribute("role", "status");
+    indicator.setAttribute("aria-live", "polite");
+    indicator.textContent = "채점 중";
+    indicator.hidden = true;
+    button.after(indicator);
+  }
+  indicator.hidden = !busy;
+  button.closest(".action-control")?.classList.toggle("grade-active", busy);
+}
+
 function setBusy(busy, showExecution = true) {
   executionPending = busy;
   byId("practice-workbench").setAttribute("aria-busy", String(busy));
@@ -1885,6 +1909,7 @@ async function execute(path, body) {
   byId("task-completion").hidden = true;
   byId("failure-help").hidden = true;
   const problem = path.match(/^\/api\/practice\/(P\d{2})\/verify$/)?.[1];
+  setGradeBusy(problem, true);
   if (problem === "P01") selectP01Pane("grade");
   const affectedProblem = problem;
   if (affectedProblem) {
@@ -1983,6 +2008,7 @@ async function execute(path, body) {
     clearInterval(executionTimer);
     executionTimer = null;
     byId("request-elapsed").hidden = true;
+    setGradeBusy(problem, false);
     setBusy(false);
   }
 }
@@ -2177,6 +2203,7 @@ async function refreshTutorialResult(celebrate = false) {
   let timer = null;
   if (celebrate) {
     button.disabled = true;
+    setGradeBusy("P00", true);
     showGradingWait("P00", new Date().toISOString());
     setText("tutorial-grade-status", "제출한 요청의 검사 결과를 확인하고 있습니다.");
     timer = setInterval(updateCaseElapsed, 1000);
@@ -2194,7 +2221,7 @@ async function refreshTutorialResult(celebrate = false) {
     setText("tutorial-status", result.received !== undefined ? "서버가 받은 JSON 원본입니다. 작성한 파일과 대조하세요." : "표시할 요청 원본이 없습니다. 문제 풀기 탭이나 터미널 안내에서 제출하세요.");
   } catch (error) { setText(celebrate ? "tutorial-grade-status" : "tutorial-status", error.message);
     if (celebrate) displayTutorialGrade({completed: false, feedback: error.message});
-  } finally { clearInterval(timer); if (celebrate) button.disabled = false; }
+  } finally { clearInterval(timer); if (celebrate) { setGradeBusy("P00", false); button.disabled = false; } }
 }
 byId("tutorial-check").addEventListener("click", () => refreshTutorialResult());
 byId("tutorial-grade-check").addEventListener("click", () => refreshTutorialResult(true));

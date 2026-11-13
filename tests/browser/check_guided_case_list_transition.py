@@ -9,6 +9,18 @@ with sync_playwright() as p:
     page.on('pageerror', lambda error: errors.append(str(error)))
     page.goto(os.getenv('GUIDED_UI_BASE_URL', 'http://127.0.0.1:28097'), wait_until='networkidle')
     before = page.evaluate('fetch("/api/progress").then(r=>r.json())')
+    pending_p00 = []
+    page.route('**/api/practice/P00/result', lambda route: pending_p00.append(route))
+    page.evaluate('selectWorkspace("tutorial"); selectTutorialPane("grade")')
+    page.locator('#tutorial-grade-check').click()
+    p00_indicator = page.locator('#tutorial-grade-check + .grade-indicator')
+    expect(p00_indicator).to_be_visible()
+    expect(p00_indicator).to_have_text('채점 중')
+    assert page.evaluate('getComputedStyle(document.querySelector("#tutorial-grade-check-indicator"), "::before").animationName') == 'grade-spin'
+    assert pending_p00
+    pending_p00.pop().fulfill(json={'completed': False, 'feedback': 'fixture'})
+    expect(p00_indicator).to_be_hidden()
+    page.unroute('**/api/practice/P00/result')
     for width in (1440, 390):
         page.set_viewport_size({'width': width, 'height': 1000})
         for mission in ('P01', 'P04', 'P05'):
@@ -32,6 +44,11 @@ with sync_playwright() as p:
                           'if(id==="P01")selectP01Pane("grade");else selectModelCallPane("grade");'
                           'void execute(`/api/practice/${id}/verify`);}', mission)
             expect(page.locator('#case-progress .case-running-bar')).to_have_count(1)
+            grade_button = '#verify' if mission == 'P01' else f'#h{mission[1:]}-verify'
+            indicator = page.locator(grade_button + ' + .grade-indicator')
+            expect(indicator).to_be_visible()
+            expect(indicator).to_have_text('채점 중')
+            expect(page.locator(grade_button)).to_be_disabled()
             expect(page.locator('#case-results')).to_be_hidden()
             expect(page.get_by_role('heading', name='테스트 케이스', exact=True)).to_have_count(1)
             page.wait_for_timeout(650)
@@ -40,6 +57,7 @@ with sync_playwright() as p:
                 'course_verdict': 'ERR', 'task_completed': False, 'reason': '표시 검사',
                 'result': {'cases': [{'case_id': 'final-case', 'status': 'ERR', 'reason': '최종 근거'}]}})
             expect(page.locator('#case-results-list > .case-card')).to_have_count(1)
+            expect(indicator).to_be_hidden()
             expect(page.locator('#case-progress')).to_be_hidden()
             for route in late_progress:
                 route.fulfill(json={'suite_id': 'display-only', 'phase': 'running',
@@ -53,6 +71,12 @@ with sync_playwright() as p:
             assert page.locator('#case-results details[open]').count() == 0
             page.unroute(grade_url)
             page.unroute(progress_url)
+    page.route('**/api/practice/P01/verify', lambda route: route.abort())
+    page.evaluate('selectTab(practiceGroups.findIndex(g=>g.includes("P01")),"P01");selectP01Pane("grade")')
+    page.locator('#verify').click()
+    expect(page.locator('#verify + .grade-indicator')).to_be_hidden()
+    expect(page.locator('#verify')).to_be_enabled()
+    page.unroute('**/api/practice/P01/verify')
     assert not errors, errors
     assert before == page.evaluate('fetch("/api/progress").then(r=>r.json())')
     print('PASS: P01/P04/P05 × desktop/mobile; one list during/after grading; late progress ignored; no final polling or completion writes')

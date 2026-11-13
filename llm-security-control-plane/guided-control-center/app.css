@@ -167,6 +167,13 @@ textarea { min-height: 112px; resize: vertical; }
 .actions.single { grid-template-columns: minmax(0, 1fr); }
 .action-control { position: relative; display: grid; grid-template-columns: minmax(0, 1fr); min-width: 0; }
 .action-control > .primary, .action-control > .secondary { width: 100%; min-width: 0; }
+.action-control.grade-active, #mission-execution .action-control.grade-active { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; column-gap: 10px; }
+.action-control.grade-active > :is(.action-tooltip, .action-tip) { grid-column: 1 / -1; }
+.grade-indicator[hidden] { display: none; }
+.grade-indicator { display: inline-flex; align-items: center; gap: 7px; white-space: nowrap; color: var(--blue); font-size: 12px; font-weight: 800; }
+.grade-indicator::before { content: ""; width: 16px; height: 16px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: grade-spin .75s linear infinite; }
+@keyframes grade-spin { to { transform: rotate(360deg); } }
+
 .action-tooltip, .action-tip { display: block; position: static; width: 100%; margin-top: 8px; padding: 10px 12px; color: var(--muted); border: 1px solid var(--line); background: var(--control); font-size: 12px; line-height: 1.65; opacity: 1; visibility: visible; transform: none; overflow-wrap: anywhere; }
 .action-help-summary { display: block; margin-bottom: 5px; color: var(--ink); font-size: 12px; font-weight: 700; line-height: 1.5; }
 .action-help-detail { display: block; }
