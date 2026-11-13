@@ -544,3 +544,29 @@ test('P08 per-case counts use closed case ledger, never normal/risk aggregates',
   delete payload.result.capabilities;
   assert.ok(ctx.caseDisplayContext({case_id:'a'},payload,'P08').case_comparisons.every(row=>row.actual===undefined));
 });
+
+test('HTTP grading errors appear as a failed test case with the server cause', () => {
+  let rendered;
+  const ctx = {renderEnvelope: payload => {rendered = payload;}};
+  vm.runInNewContext(source.slice(source.indexOf('function renderError('), source.indexOf('function displayCaseValue(')), ctx);
+  const error = new Error('HTTP 502');
+  error.detail = 'service unavailable';
+  error.payload = {detail: {stopped_stage:'guided_h06_nemo_action', reason:'container failed'}, diagnosis: {cause:'runner failed'}};
+  ctx.renderError(error);
+  assert.equal(rendered.course_verdict, 'ERR');
+  assert.equal(rendered.cases[0].status, 'ERR');
+  assert.equal(rendered.cases[0].error.stopped_stage, 'guided_h06_nemo_action');
+  assert.equal(rendered.cases[0].diagnosis.cause, 'runner failed');
+});
+
+test('native case errors expose stderr beside the failing case', () => {
+  const {ctx} = caseHarness();
+  const card = ctx.createCaseCard({case_id:'failed', status:'ERR', stderr:'Traceback: bad import', container_logs:'last container line'}, 0);
+  const texts = [];
+  const visit = node => {if (node.textContent) texts.push(node.textContent); for (const child of node.children || []) visit(child);};
+  visit(card);
+  assert.ok(texts.includes('실행 오류 출력'));
+  assert.ok(texts.includes('Traceback: bad import'));
+  assert.ok(texts.includes('컨테이너 로그 · 최근 30줄'));
+  assert.ok(texts.includes('last container line'));
+});

@@ -1186,6 +1186,7 @@ async function request(path, body = undefined) {
   if (!response.ok) {
     const error = new Error(JSON.stringify(payload));
     error.rawResponse = formatRawJson(text);
+    error.payload = payload;
     const diagnostic = payload.diagnosis;
     const original = typeof payload.detail === "string" ? payload.detail : JSON.stringify(payload.detail);
     error.detail = diagnostic ? [original, diagnostic.cause, `수정 파일: ${diagnostic.file}`, diagnostic.field ? `확인 항목: ${diagnostic.field}` : "", `모델 호출: ${diagnostic.model_calls}`, `다음 행동: ${diagnostic.next_action}`, diagnostic.log_command ? `실행 로그 확인:\n${diagnostic.log_command}` : ""].filter(Boolean).join("\n") : payload.detail;
@@ -1567,7 +1568,12 @@ function renderError(error) {
   const payload = { course_verdict: "ERR", client_error: true,
     reason: "검증 응답을 확인하지 못했습니다. 뒤 서비스의 실행 여부는 아직 알 수 없습니다.",
     next_check: "원시 오류를 먼저 확인합니다. 연결 오류라면 해당 문제의 컨테이너 상태를 확인합니다.",
-    error: error.message, stage_calls: [] };
+    error: error.message, stage_calls: [],
+    cases: Array.isArray(error.payload?.cases) ? error.payload.cases : [{
+      case_id: "채점 요청 오류", status: "ERR",
+      error: error.payload?.detail ?? error.detail ?? error.message,
+      diagnosis: error.payload?.diagnosis,
+    }] };
   if (/^P\d{2}$/.test(error.detail?.activity_id || "") && error.detail.task_completed === false) {
     Object.assign(payload, error.detail);
     payload.course_verdict = "ERR";
@@ -1762,7 +1768,9 @@ function createCaseCard(item, index) {
     ["기대 동작", item.expected ?? item.expected_response ?? (item.expected_status !== undefined ? {http_status: item.expected_status} : undefined)],
     ["실제 결과", item.response ?? item.returned ?? item.reply ?? item.bot_message ?? item.actual],
     ["처리 경로", item.dialog_path],
-    ["오류", item.error],
+    ["오류", item.error ?? item.detail],
+    ["실행 오류 출력", item.stderr ?? item.traceback],
+    ["컨테이너 로그 · 최근 30줄", item.container_logs],
     ["다음 확인", item.next_check],
   ];
   if (item.diagnosis) {
