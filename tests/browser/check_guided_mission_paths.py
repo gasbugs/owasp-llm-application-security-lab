@@ -29,8 +29,16 @@ with sync_playwright() as p:
             expected = manifest[display]
             assert expected, (mission, display)
             panel = page.locator("#h" + mission[1:] + "-work")
+            panel.locator("details").evaluate_all("items => items.forEach(item => item.open = true)")
             text = panel.inner_text()
             apply = panel.locator('pre[data-code-title="코드 적용 · 파일 복사와 재생성"]')
+            if apply.count() == 0:
+                assert page.evaluate("id => typeof BLOCK_LABS !== 'undefined' && Boolean(BLOCK_LABS[id])", mission), (mission, display)
+                for source, workspace_name, _services in expected:
+                    assert (root / "llm-security-control-plane" / source).is_file(), (mission, source)
+                    assert workspace_name in text, (mission, workspace_name)
+                count += 1
+                continue
             assert apply.count() == 1, (mission, display)
             command = apply.inner_text()
             assert "cd ~/owasp-llm-lab-setup-guide" in command, (mission, display)

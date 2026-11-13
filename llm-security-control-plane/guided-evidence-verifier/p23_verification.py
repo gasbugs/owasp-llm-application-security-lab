@@ -32,10 +32,15 @@ def check(receipt, current, expected_runner, execution_id):
         and error.get("provider_attempts")==0 and error.get("provider_results")==[]
         and error.get("returned") is None and error.get("error")=={"type":"RuntimeError","message":"model unavailable"})
     checks=[valid_normal,valid_blank,valid_error]
+    normal_error = normal.get("error") or {}
+    if normal_error.get("type") == "UnboundLocalError" and "client" in normal_error.get("message", ""):
+        next_check = "모델 호출보다 앞에서 Bedrock Runtime 연결 블록이 실행되는지 순서를 확인하세요. 이번 실행은 AWS 호출 전에 멈췄습니다."
+    else:
+        next_check = "RAW 응답에서 실패한 사례의 함수 오류·호출 수를 확인하세요."
     return {"activity_id":"P23","execution_id":execution_id,"source_digest":current["source_digest"],
         "verified_by":"guided-evidence-verifier","course_verdict":"PASS" if all(checks) else "ERR",
         "security_verdict":"PASS" if all(checks) else "ERR","task_completed":all(checks),
-        "next_check":"세 사례의 응답·호출 수를 확인하세요." if all(checks) else "RAW 응답에서 실패한 사례의 함수 오류·호출 수를 확인하세요.",
+        "next_check":"세 사례의 응답·호출 수를 확인하세요." if all(checks) else next_check,
         "result":{"model_id":MODEL,"provider_request_id":response.get("ResponseMetadata",{}).get("RequestId"),
         "usage":response.get("usage"),"requested_max_output_tokens":64,"forwarded_parameters":{"maxTokens":64},"cases":[{"case_id":c["case_id"],"case_verified":bool(ok),
         "status":"PASS" if ok else "ERR","input":c.get("input"),"expected":{"normal":{"provider_attempts":1,"return":"actual Converse response"},"blank":{"provider_attempts":0,"error_type":"ValueError"},"provider-error":{"provider_attempts":1,"error_type":"RuntimeError","message":"model unavailable"}}[c["case_id"]],"response":c["returned"],"error":c["error"],"provider_attempts":c["provider_attempts"]} for c,ok in zip(cases,checks)]}}

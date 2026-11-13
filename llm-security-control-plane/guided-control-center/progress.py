@@ -41,7 +41,7 @@ class ProgressStore:
     def tutorial_completed(self, owner):
         with self.lock, self.db:
             self.db.execute('CREATE TABLE IF NOT EXISTS tutorial_completion (owner TEXT PRIMARY KEY)')
-            return self.db.execute('SELECT 1 FROM tutorial_completion WHERE owner=?', (owner,)).fetchone() is not None
+            return self.db.execute('SELECT 1 FROM tutorial_completion LIMIT 1').fetchone() is not None
 
     def complete_tutorial(self, owner):
         with self.lock, self.db:

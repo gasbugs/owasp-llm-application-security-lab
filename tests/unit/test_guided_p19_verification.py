@@ -58,13 +58,13 @@ class P19VerificationTests(unittest.TestCase):
         self.assertEqual(len(result['checks']),1)
         with self.assertRaises(verification.RESULTS.EvidenceMismatch):self.verify()
 
-    def test_all_ten_requirements_complete_only_after_baseline_checks(self):
+    def test_all_twelve_requirements_complete_only_after_baseline_checks(self):
         result = self.verify()
         self.assertTrue(result['task_completed'])
         self.assertEqual(result['security_verdict'], 'PASS')
-        self.assertEqual(len(result['checks']), 10)
+        self.assertEqual(len(result['checks']), 12)
 
-    def test_actual_alternative_function_executes_all_ten_inputs(self):
+    def test_actual_alternative_function_executes_all_twelve_inputs(self):
         root = PATH.parents[2]
         runner_path = root / 'llm-security-control-plane/guided-labs/h19-incident-investigation/execution.py'
         runner_spec = importlib.util.spec_from_file_location('p19_execution_test', runner_path)
@@ -79,7 +79,7 @@ class P19VerificationTests(unittest.TestCase):
         self.receipt.update(source_digest=self.build['source_digest'], analysis_executions=executions)
         self.assertTrue(self.verify()['task_completed'])
         self.assertEqual([row['execution_status'] for row in executions].count('returned'), 6)
-        self.assertEqual([row['execution_status'] for row in executions].count('invalid_evidence'), 4)
+        self.assertEqual([row['execution_status'] for row in executions].count('invalid_evidence'), 6)
 
         # Comment-only changes alter execution identity, not answer correctness.
         with tempfile.TemporaryDirectory() as directory:
@@ -100,7 +100,7 @@ class P19VerificationTests(unittest.TestCase):
 
     def test_missing_duplicate_and_mismatched_analyses_are_rejected(self):
         original = copy.deepcopy(self.receipt['analysis_executions'])
-        variants = [original[:-1], [original[0]] * 10,
+        variants = [original[:-1], [original[0]] * 12,
                     [{**original[0], 'source_digest': 'b' * 64}, *original[1:]],
                     [{**original[0], 'input_digest': 'b' * 64}, *original[1:]],
                     [{**original[0], 'expected_invalid': True}, *original[1:]],

@@ -29,7 +29,15 @@ def assert_idle(database, problem):
         tables = {row[0] for row in db.execute("SELECT name FROM sqlite_master WHERE type='table'")}
         execution = problem.lower() + "_executions"
         if execution in tables:
-            require(db.execute(f"SELECT COUNT(*) FROM {execution} WHERE closed_at IS NULL").fetchone()[0] == 0,
+            # A grant expires after 180 seconds; an unclosed historical row is not a live run.
+            active = db.execute(
+                f"SELECT COUNT(*) FROM {execution} WHERE closed_at IS NULL AND started_at > ?",
+                (time.time() - 180,),
+            ).fetchone()[0]
+            calls = problem.lower() + "_calls"
+            pending = (db.execute(f"SELECT COUNT(*) FROM {calls} WHERE state='pending'").fetchone()[0]
+                       if calls in tables else 0)
+            require(active == 0 and pending == 0,
                     "finish the running mission before deleting its AWS resources")
         preparation = problem.lower() + "_preparations"
         if preparation in tables:
@@ -149,8 +157,12 @@ def delete_resources(problem, operation_id, database, *, p02_template, p02_state
                 require(current["state"] == "ready" and current["resources"] == snapshot,
                         "P04 policy ownership or journal differs")
                 identifier = snapshot["guardrail"]["guardrailIdentifier"]
+                versions = sdk["bedrock"].list_guardrails(guardrailIdentifier=identifier, maxResults=100)
+                require(not versions.get("nextToken") and
+                        [row["version"] for row in versions.get("guardrails", [])] == ["DRAFT"],
+                        "Guardrail has versions outside this mission deletion")
                 step(2)
-                sdk["bedrock"].delete_guardrail(guardrailIdentifier=identifier, guardrailVersion="DRAFT")
+                sdk["bedrock"].delete_guardrail(guardrailIdentifier=identifier)
                 wait_absent(lambda: sdk["bedrock"].get_guardrail(guardrailIdentifier=identifier, guardrailVersion="DRAFT"))
                 removed = [identifier]
         step(3 if problem == "P04" else 8)

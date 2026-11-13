@@ -1,0 +1,9 @@
+[Unit]
+Description=Watch guided block build requests
+
+[Path]
+PathExistsGlob=%h/owasp-llm-lab-setup-guide/.state/block-build-jobs/*.request.json
+Unit=guided-block-build.service
+
+[Install]
+WantedBy=default.target

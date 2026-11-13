@@ -9,7 +9,7 @@ def observe_request(request_id, run_business, tracer, logger, counter):
     sequence = 0
     # TODO 1: tracer.start_as_current_span()으로 요청 root Span을 여세요.
     raise NotImplementedError('Implement request Log, Trace and Counter instrumentation')
-    with root_span:
+    with root_span as root_span:
         @contextmanager
         def stage(name):
             nonlocal sequence

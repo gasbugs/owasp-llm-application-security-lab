@@ -22,9 +22,27 @@ async def prepare_document(body, document_id, aws):
 
     # TODO 2: S3 클라이언트를 만들고 key·source_text를 put_object()로 저장하세요.
     # 결과 전체를 source에 받으세요. 성공하기 전에는 임베딩을 호출하지 않습니다.
+    s3 = session.client("s3", region_name=session.region_name, config=config)
+    source = s3.put_object(
+        Bucket=bucket,
+        Key=key,
+        Body=source_text.encode("utf-8"),
+        ContentType="text/markdown; charset=utf-8",
+        Metadata={"course": "tenant-03", "activity": "h02"},
+    )
     # TODO 3: 같은 text로 Titan을 invoke_model() 한 번 호출하세요.
     # 결과 전체를 embedding_response에 받으세요.
-    raise NotImplementedError("P02 document preparation is not implemented")
+    bedrock = session.client(
+        "bedrock-runtime", region_name=session.region_name, config=config
+    )
+    embedding_response = bedrock.invoke_model(
+        modelId="amazon.titan-embed-text-v2:0",
+        body=json.dumps(
+            {"inputText": text, "dimensions": 1024, "normalize": True}
+        ),
+        contentType="application/json",
+        accept="application/json",
+    )
 
     # 제공 흐름: SDK stream을 JSON으로 변환하되 응답 필드는 그대로 유지합니다.
     embedding = json.loads(embedding_response["body"].read())

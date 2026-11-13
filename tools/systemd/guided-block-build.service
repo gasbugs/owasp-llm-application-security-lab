@@ -1,0 +1,7 @@
+[Unit]
+Description=Build one guided block submission
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 %h/owasp-llm-lab-setup-guide/tools/guided-block-build-worker.py
+TimeoutStartSec=300

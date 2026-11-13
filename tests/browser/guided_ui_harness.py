@@ -39,14 +39,19 @@ def display_server():
                 self.send((ROOT / "case-catalog.json").read_bytes())
             elif path == "/api/experience-catalog":
                 self.send((ROOT / "experience.json").read_bytes())
-            elif path == "/" or path in {"/app.js", "/app.css"} or path.startswith("/fonts/"):
+            elif path == "/" or path in {"/app.js", "/app.css", "/block-lab.js", "/block-lab.css"} or path.startswith("/fonts/"):
                 source = ROOT / ("index.html" if path == "/" else path.lstrip("/"))
                 if not source.is_file() or not source.resolve().is_relative_to(ROOT.resolve()):
                     self.send({}, status=404)
                     return
                 kind = {".html": "text/html; charset=utf-8", ".js": "text/javascript",
                         ".css": "text/css", ".woff2": "font/woff2"}.get(source.suffix, "text/plain")
-                self.send(source.read_bytes(), kind)
+                body = source.read_bytes()
+                if path == "/":
+                    # Display tests have no reset service; keep startup reads local to the fixture.
+                    shim = b'<script>const fixtureFetch = window.fetch.bind(window); window.fetch = (input, init) => String(input).endsWith(":28198/status") ? Promise.resolve(new Response(JSON.stringify({state:"idle"}), {headers:{"Content-Type":"application/json"}})) : fixtureFetch(input, init);</script>'
+                    body = body.replace(b"<head>", b"<head>" + shim, 1)
+                self.send(body, kind)
             else:
                 self.send({"detail": "not provided by display fixture"}, status=404)
 

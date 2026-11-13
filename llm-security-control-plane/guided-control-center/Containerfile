@@ -13,8 +13,34 @@ COPY --chmod=0444 guided-control-center/server.py guided-control-center/progress
     guided-control-center/app.css guided-control-center/app.js guided-control-center/experience.json guided-control-center/case-catalog.json ./
 COPY --chmod=0444 guided-control-center/admin-answers/P00.md guided-control-center/admin-answers/P01.md guided-control-center/admin-answers/P02.md guided-control-center/admin-answers/P03.md guided-control-center/admin-answers/P04.md guided-control-center/admin-answers/P05.md guided-control-center/admin-answers/P06.md guided-control-center/admin-answers/P07.md guided-control-center/admin-answers/P08.md guided-control-center/admin-answers/P09.md guided-control-center/admin-answers/P10.md guided-control-center/admin-answers/P11.md guided-control-center/admin-answers/P12.md guided-control-center/admin-answers/P13.md guided-control-center/admin-answers/P14.md guided-control-center/admin-answers/P15.md guided-control-center/admin-answers/P16.md guided-control-center/admin-answers/P17.md guided-control-center/admin-answers/P18.md guided-control-center/admin-answers/P19.md guided-control-center/admin-answers/P20.md guided-control-center/admin-answers/P21.md guided-control-center/admin-answers/P22.md guided-control-center/admin-answers/P23.md /app/admin-answers/
 RUN chmod 0555 /app/admin-answers && chmod 0444 /app/admin-answers/*
+COPY --chmod=0444 guided-control-center/block-lab.css guided-control-center/block-lab.js ./
+COPY --chmod=0444 guided-control-center/block_submission.py ./
+COPY --chmod=0444 guided-labs/h01-bedrock-gateway/learner.py /app/block-starters/P01.py
+COPY --chmod=0444 guided-labs/h02-document-ingestion/learner.py /app/block-starters/P02.py
+COPY --chmod=0444 guided-labs/h03-ingestion-search/learner.py /app/block-starters/P03.py
+COPY --chmod=0444 guided-labs/h04-bedrock-guardrail/learner.py /app/block-starters/P04.py
+COPY --chmod=0444 guided-labs/h05-nemo-dialog/config/flows.co /app/block-starters/P05.co
+COPY --chmod=0444 guided-labs/h06-nemo-action/actions.py /app/block-starters/P06.py
+COPY --chmod=0444 guided-labs/h07-content-safety/config/config.yml /app/block-starters/P07.yml
+COPY --chmod=0444 guided-control-center/block-starters/P08.yml /app/block-starters/P08.yml
+COPY --chmod=0444 guided-labs/h09-presidio-redaction/policy.py /app/block-starters/P09.py
+COPY --chmod=0444 guided-labs/h10-self-check-output/config/prompts.yml /app/block-starters/P10.yml
+COPY --chmod=0444 guided-labs/h11-rag-provenance/policy.py /app/block-starters/P11.py
+COPY --chmod=0444 guided-labs/h12-application-pipeline/pipeline.py /app/block-starters/P12.py
+COPY --chmod=0444 guided-labs/h13-promptfoo/promptfooconfig.yaml /app/block-starters/P13.yaml
+COPY --chmod=0444 guided-labs/h14-garak/garak-config.yaml /app/block-starters/P14.yaml
+COPY --chmod=0444 guided-labs/h15-pyrit/attack.py /app/block-starters/P15.py
+COPY --chmod=0444 guided-labs/h16-policy-promotion/policy.py /app/block-starters/P16.py
+COPY --chmod=0444 guided-labs/h17-telemetry/instrumentation.py /app/block-starters/P17.py
+COPY --chmod=0444 guided-labs/h18-product-queries/queries.yaml /app/block-starters/P18.yaml
+COPY --chmod=0444 guided-labs/h19-incident-investigation/investigation.py /app/block-starters/P19.py
+COPY --chmod=0444 guided-labs/h20-alert-dashboard/rules.yaml /app/block-starters/P20-rules.yaml
+COPY --chmod=0444 guided-labs/h20-alert-dashboard/dashboard.json /app/block-starters/P20-dashboard.json
+COPY --chmod=0444 guided-labs/h21-agent-policy/policy.py /app/block-starters/P21.py
+COPY --chmod=0444 guided-labs/h22-mcp-approval/server.py /app/block-starters/P22.py
 COPY guided-control-center/fonts/IBMPlexMono-SemiBold.woff2 guided-control-center/fonts/LICENSE.txt /app/fonts/
 RUN chmod 0755 /app/fonts && chmod 0444 /app/fonts/*
+RUN chmod 0755 /app/block-starters && install -d -m 0755 /block-work
 RUN install -d -o 65532 -g 65532 -m 0700 /state
 
 USER 65532:65532

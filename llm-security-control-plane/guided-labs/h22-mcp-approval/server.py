@@ -91,6 +91,9 @@ def verify_approval(
     }
     if any(claims.get(key) != value for key, value in expected.items()):
         raise ToolError("approval-exact-call-mismatch")
+    # TODO: requester와 reviewer가 같으면 ToolError로 자기 승인을 거부하세요.
+    if False:
+        raise ToolError("approval-self-review-forbidden")
     if int(claims.get("expires_at", 0)) <= int(time.time()):
         raise ToolError("approval-expired")
     nonce = claims.get("nonce")

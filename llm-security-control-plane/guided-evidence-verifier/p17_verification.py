@@ -57,25 +57,51 @@ def check_execution(receipt, ledger, build, runner_digests, selected_case=None):
 
 
 def collect_and_verify(receipt, ledger, build, runner_digests, *, client,
-                       loki_url, tempo_url, prometheus_url, result, timeout=15, selected_case=None):
+                       loki_url, tempo_url, prometheus_url, result, timeout=15, selected_case=None,
+                       historical=False):
     cases = check_execution(receipt, ledger, build, runner_digests,selected_case)
     def get(url, **kwargs):
         response = client.get(url, **kwargs)
         response.raise_for_status()
         return response.json()
     metric_query = 'guided_p17_decisions_total'
+    result['collection_stage'] = 'prometheus_baseline'
     before = get(prometheus_url + '/api/v1/query', params={
         'query': metric_query, 'time': receipt['query_start_ns'] / 1e9})
-    after = get(prometheus_url + '/api/v1/query', params={
-        'query': metric_query, 'time': receipt['query_end_ns'] / 1e9})
-    result.update(prometheus_before=before, prometheus_after=after,
-                  source_digest=receipt['source_digest'], cases=[], products=[])
-    first, last = RESULTS.counter_values(before), RESULTS.counter_values(after)
-    require(first == receipt['counter_before'] and last == receipt['execution']['counter_values'],
-            'product Counter differs from actual SDK values')
+    result.update(prometheus_before=before, source_digest=receipt['source_digest'],
+                  cases=[], products=[])
+    first = RESULTS.counter_values(before)
+    require(first == receipt['counter_before'],
+            'Prometheus baseline differs from SDK counter before execution')
     expected_delta={'allow':1,'block':2} if selected_case is None else {'allow':int(selected_case==0),'block':int(selected_case!=0)}
-    require({d:last[d]-first[d] for d in first}==expected_delta,'Counter delta differs')
-    # Product export may lag execution. Only re-read observations; never replay actions.
+    target = receipt['execution']['counter_values']
+    require({d:target[d]-first[d] for d in first} == expected_delta,
+            'SDK Counter delta differs from the fixed business cases')
+    # A later case may have advanced the current Counter. Final sequence checks
+    # re-read the product value at this case's recorded scrape time.
+    result['collection_stage'] = 'prometheus_scrape'
+    deadline = time.monotonic() + timeout
+    attempts = 0
+    while True:
+        attempts += 1
+        after = get(prometheus_url + '/api/v1/query', params={
+            'query': metric_query, 'time': receipt['query_end_ns'] / 1e9 if historical else time.time()})
+        result.update(prometheus_after=after, prometheus_attempts=attempts)
+        rows = after.get('data', {}).get('result') if after.get('status') == 'success' else None
+        if isinstance(rows, list) and len(rows) < 2:
+            if time.monotonic() >= deadline:
+                raise TimeoutError('Prometheus decision series were not collected')
+            time.sleep(0.25)
+            continue
+        last = RESULTS.counter_values(after)
+        if last == target:
+            break
+        require(not any(last[d] > target[d] for d in target),
+                'Prometheus Counter exceeded this execution target')
+        if time.monotonic() >= deadline:
+            raise TimeoutError('Prometheus scrape did not reach this execution target')
+        time.sleep(0.25)
+    result['collection_stage'] = 'loki_tempo'
     deadline = time.monotonic() + timeout
     for case in cases:
         trace_id = case['ledger']['stages'][0]['trace_id']
@@ -101,3 +127,4 @@ def collect_and_verify(receipt, ledger, build, runner_digests, *, client,
                 raise TimeoutError('current telemetry not collected')
             time.sleep(0.25)
     result['counter_delta'] = {d: last[d]-first[d] for d in first}
+    result['collection_stage'] = 'verified'

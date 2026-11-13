@@ -74,6 +74,25 @@ def canonical_digest(
     return hashlib.sha256(payload.encode()).hexdigest()
 
 
+def sign_claims(claims: dict) -> str:
+    encoded = base64.urlsafe_b64encode(
+        json.dumps(claims, sort_keys=True, separators=(",", ":")).encode()
+    ).decode().rstrip("=")
+    signature = hmac.new(APPROVAL_SECRET, encoded.encode(), hashlib.sha256).hexdigest()
+    return f"{encoded}.{signature}"
+
+
+def self_review_probe(suite_id: str, call_id: str, trace_id: str, notice: str) -> str:
+    """Private fixed fixture: bypass Host issuer to test Server authorization."""
+    requester = "course-reviewer"
+    return sign_claims({
+        "suite_id": suite_id, "requester": requester, "reviewer": requester,
+        "server_id": SERVER_ID, "tool": "publish_notice",
+        "args_sha256": canonical_digest(suite_id, call_id, trace_id, requester, notice),
+        "expires_at": int(time.time()) + 300, "nonce": secrets.token_hex(16),
+    })
+
+
 def approve(
     suite_id: str,
     call_id: str,
@@ -95,11 +114,7 @@ def approve(
         "expires_at": expires_at if expires_at is not None else int(time.time()) + 300,
         "nonce": secrets.token_hex(16),
     }
-    encoded = base64.urlsafe_b64encode(
-        json.dumps(claims, sort_keys=True, separators=(",", ":")).encode()
-    ).decode().rstrip("=")
-    signature = hmac.new(APPROVAL_SECRET, encoded.encode(), hashlib.sha256).hexdigest()
-    return f"{encoded}.{signature}"
+    return sign_claims(claims)
 
 
 def result_summary(result) -> dict:
@@ -181,6 +196,15 @@ async def run_suite(_authorized: None = Depends(require_control)) -> dict:
             self_approval = {"denied": False, "reason": None}
         except ValueError as exc:
             self_approval = {"denied": True, "reason": str(exc)}
+
+        self_call_id = str(uuid.uuid4())
+        self_token = self_review_probe(suite_id, self_call_id, trace_id, notice)
+        self_result = await client.call_tool("publish_notice", {
+            "suite_id": suite_id, "call_id": self_call_id, "trace_id": trace_id,
+            "requester": "course-reviewer", "notice": notice, "approval_token": self_token,
+        })
+        self_approval.update(server_is_error=bool(self_result.is_error),
+                             effect_count=await effect_count(client, suite_id))
 
         approved_call_id = str(uuid.uuid4())
         approval_token = approve(
@@ -358,6 +382,12 @@ async def run_sequence_case(body:CaseRunRequest,_authorized:None=Depends(require
                     approve(suite,str(uuid.uuid4()),trace,requester,requester,notice)
                     receipt['self_approval']={'denied':False,'reason':None}
                 except ValueError as exc:receipt['self_approval']={'denied':True,'reason':str(exc)}
+                call_id=str(uuid.uuid4())
+                token=self_review_probe(suite,call_id,trace,notice)
+                response=await client.call_tool('publish_notice',{'suite_id':suite,'call_id':call_id,
+                    'trace_id':trace,'requester':'course-reviewer','notice':notice,'approval_token':token})
+                receipt['self_approval'].update(server_is_error=bool(response.is_error),
+                    effect_count=await effect_count(client,suite))
             else:
                 call_id=str(uuid.uuid4());token='';sent_notice=notice
                 if body.case_id=='changed-args':

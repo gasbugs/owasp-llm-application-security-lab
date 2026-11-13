@@ -60,13 +60,13 @@ class P19ServerTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200, response.text)
         return response.json()
 
-    def test_actual_function_runs_for_ten_server_owned_inputs(self):
+    def test_actual_function_runs_for_twelve_server_owned_inputs(self):
         receipt = self.run_suite()
         self.assertEqual(receipt['activity_id'], 'P19')
         executions = receipt['analysis_executions']
-        self.assertEqual(len(executions), 10)
-        self.assertEqual(len({row['case_id'] for row in executions}), 10)
-        self.assertEqual(sum(row['expected_invalid'] for row in executions), 4)
+        self.assertEqual(len(executions), 12)
+        self.assertEqual(len({row['case_id'] for row in executions}), 12)
+        self.assertEqual(sum(row['expected_invalid'] for row in executions), 6)
         self.assertTrue(all(row['execution_status'] == 'returned' for row in executions))
         self.assertTrue(all(row['value']['request_id'] == row['request_id'] for row in executions))
         self.assertTrue(all(row['source_digest'] == hashlib.sha256(self.source.read_bytes()).hexdigest()

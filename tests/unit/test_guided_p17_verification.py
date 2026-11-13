@@ -70,17 +70,82 @@ class P17VerificationTests(unittest.TestCase):
             prometheus_url='http://prometheus', result=result, timeout=0)
         return result
 
-    def test_actual_signals_requeried_with_fixed_counter_interval(self):
+    def test_actual_signals_requeried_with_current_counter_observation(self):
         result = self.verify()
         self.assertEqual(len(result['cases']), 3)
         self.assertEqual(result['counter_delta'], {'allow': 1, 'block': 2})
         self.assertEqual(self.client.get.call_count, 8)
         times = [c.kwargs['params']['time'] for c in self.client.get.call_args_list if c.args[0].endswith('/api/v1/query')]
-        self.assertEqual(times, [self.receipt['query_start_ns']/1e9, self.receipt['query_end_ns']/1e9])
+        self.assertEqual(times[0], self.receipt['query_start_ns']/1e9)
+        self.assertGreaterEqual(times[1], self.receipt['query_end_ns']/1e9)
         queries = [c.kwargs['params']['query'] for c in self.client.get.call_args_list
                    if c.args[0].endswith('/loki/api/v1/query_range')]
         self.assertEqual(len(queries), 3)
         self.assertTrue(all(' | json | request_id = ' in query for query in queries))
+
+    def test_sequence_recheck_uses_original_scrape_time(self):
+        result = {}
+        verification.collect_and_verify(self.receipt, self.ledger, self.build, self.digests,
+            client=self.client, loki_url='http://loki', tempo_url='http://tempo',
+            prometheus_url='http://prometheus', result=result, timeout=0, historical=True)
+        times = [call.kwargs['params']['time'] for call in self.client.get.call_args_list
+                 if call.args[0].endswith('/api/v1/query')]
+        self.assertEqual(times, [self.receipt['query_start_ns']/1e9,
+                                 self.receipt['query_end_ns']/1e9])
+        self.assertEqual(result['collection_stage'], 'verified')
+
+    def test_delayed_prometheus_scrape_is_requeried_without_replaying_business(self):
+        original_get = self.get
+        observed = 0
+        def delayed(url, params=None):
+            nonlocal observed
+            if url.endswith('/api/v1/query') and params['time'] != self.receipt['query_start_ns']/1e9:
+                observed += 1
+                if observed == 1:
+                    return original_get(url, {'query': params['query'], 'time': self.receipt['query_start_ns']/1e9})
+            return original_get(url, params)
+        self.client.get.side_effect = delayed
+        result = {}
+        verification.collect_and_verify(self.receipt, self.ledger, self.build, self.digests,
+            client=self.client, loki_url='http://loki', tempo_url='http://tempo',
+            prometheus_url='http://prometheus', result=result, timeout=1)
+        self.assertEqual(result['prometheus_attempts'], 2)
+        self.assertEqual(result['counter_delta'], {'allow': 1, 'block': 2})
+        self.assertEqual(len(result['cases']), 3)
+
+    def test_first_scrape_without_decision_series_is_retried(self):
+        original_get = self.get
+        observed = 0
+        def delayed_series(url, params=None):
+            nonlocal observed
+            if url.endswith('/api/v1/query') and params['time'] != self.receipt['query_start_ns']/1e9:
+                observed += 1
+                if observed == 1:
+                    return httpx.Response(200, request=httpx.Request('GET', url),
+                        json={'status': 'success', 'data': {'resultType': 'vector', 'result': []}})
+            return original_get(url, params)
+        self.client.get.side_effect = delayed_series
+        result = {}
+        verification.collect_and_verify(self.receipt, self.ledger, self.build, self.digests,
+            client=self.client, loki_url='http://loki', tempo_url='http://tempo',
+            prometheus_url='http://prometheus', result=result, timeout=1)
+        self.assertEqual(result['prometheus_attempts'], 2)
+        self.assertEqual(result['collection_stage'], 'verified')
+
+    def test_missing_scrape_is_timeout_not_a_policy_verdict(self):
+        original_get = self.get
+        def never_updated(url, params=None):
+            if url.endswith('/api/v1/query'):
+                return original_get(url, {'query': params['query'], 'time': self.receipt['query_start_ns']/1e9})
+            return original_get(url, params)
+        self.client.get.side_effect = never_updated
+        result = {}
+        with self.assertRaisesRegex(TimeoutError, 'Prometheus scrape'):
+            verification.collect_and_verify(self.receipt, self.ledger, self.build, self.digests,
+                client=self.client, loki_url='http://loki', tempo_url='http://tempo',
+                prometheus_url='http://prometheus', result=result, timeout=0)
+        self.assertEqual(result['collection_stage'], 'prometheus_scrape')
+        self.assertEqual(result['cases'], [])
 
     def test_foreign_identity_and_history_rejected(self):
         for suite, started in [('other', self.started),

@@ -119,6 +119,13 @@ def main():
                     elif mount["target"] in ("/tmp/.aws", "/state"):
                         target = workspace / ("empty-" + name + mount["target"].replace("/", "-"))
                         target.mkdir(exist_ok=True)
+                    elif name == "guided-control-center" and mount["target"].startswith("/block-work/"):
+                        target = workspace / "block-work" / Path(mount["target"]).name
+                        target.parent.mkdir(exist_ok=True)
+                        target.touch()
+                    elif name == "guided-control-center" and mount["target"] == "/block-build-jobs":
+                        target = workspace / "block-build-jobs"
+                        target.mkdir(exist_ok=True)
                     else:
                         raise RuntimeError("unreviewed bind mount in selected service: " + name)
                     mount["source"] = str(target)
@@ -228,6 +235,18 @@ print(json.dumps(result))'''
                 definition = ACTIVITIES[activity]
                 path = context / definition["path"].relative_to(CONTROL)
                 source = path.read_text()
+                if activity == "H22":
+                    # The nonce fix alone must fail at the direct Server self-review case.
+                    nonce_before, nonce_after = definition["replacements"][-1]
+                    assert source.count(nonce_before) == 1
+                    path.write_text(source.replace(nonce_before, nonce_after))
+                    compose("build", *definition["services"])
+                    compose("up", "-d", "--no-deps", "--force-recreate", "--wait",
+                            "--wait-timeout", "120", *definition["services"])
+                    verify(activity, "missing-self-review")
+                    self_case = next(row for row in records[-1]["result"]["result"]["cases"]
+                                     if row["case_id"] == "self-approval")
+                    assert self_case["status"] == "HIT", self_case
                 for before, after in definition["replacements"]:
                     assert source.count(before) == 1
                     source = source.replace(before, after)

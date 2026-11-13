@@ -151,7 +151,11 @@ class SuiteVerification:
                     if self.native_sdk:
                         worker = row['execution']['execution']
                         require(worker.get('native_sdk') is True)
-                        require({c['service'] for c in worker['sdk_clients']} == {'bedrock-agent', 'bedrock-agent-runtime'})
+                        services = {c['service'] for c in worker['sdk_clients']}
+                        # Invalid job responses stop before the runtime client is created.
+                        require('bedrock-agent' in services and services <= {'bedrock-agent', 'bedrock-agent-runtime'})
+                        if worker.get('result', {}).get('status') == 'ready':
+                            require('bedrock-agent-runtime' in services)
                         require(all(c['native_sdk'] is True and c['region'] == 'us-east-1' for c in worker['sdk_clients']))
                         for index, call in enumerate(worker['calls']):
                             require(call.get('native_sdk') is True and call.get('sdk_operation') == ('GetIngestionJob', 'Retrieve')[index])

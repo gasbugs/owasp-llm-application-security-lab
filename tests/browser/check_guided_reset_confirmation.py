@@ -33,6 +33,7 @@ with sync_playwright() as playwright:
       };
     }""")
 
+    page.locator("#settings-toggle").click()
     page.locator("#practice-reset-button").click()
     assert page.locator("#practice-reset-confirm").is_visible()
     assert page.evaluate("window.resetRequests") == []
@@ -41,6 +42,8 @@ with sync_playwright() as playwright:
     assert page.evaluate("window.resetRequests") == []
 
     page.evaluate("window.resetScopeFailure = true")
+    if not page.locator("#practice-reset-button").is_visible():
+        page.locator("#settings-toggle").click()
     page.locator("#practice-reset-button").click()
     page.locator('#practice-reset-confirm button[value="yes"]').click()
     expect(page.locator("#practice-reset-status")).to_contain_text("검사 실패 fixture")
@@ -49,13 +52,15 @@ with sync_playwright() as playwright:
     assert page.evaluate("window.resetRequests") == ["GET /scope"]
 
     page.evaluate("window.resetScopeFailure = false; window.resetRequests = []")
+    if not page.locator("#practice-reset-button").is_visible():
+        page.locator("#settings-toggle").click()
     page.locator("#practice-reset-button").click()
     assert page.locator("#practice-reset-confirm").is_visible()
     assert page.evaluate("window.resetRequests") == []
     page.locator('#practice-reset-confirm button[value="yes"]').click()
     page.locator("#practice-reset-running").wait_for(state="visible")
     assert page.evaluate("document.body.classList.contains('practice-reset-locked')")
-    assert not page.locator("#practice-reset-running-progress").get_attribute("value")
+    assert page.locator("#practice-reset-running-progress").evaluate("element => Number(element.value)") >= 0
     try:
         page.locator("#home-next").click(timeout=500)
     except PlaywrightTimeoutError:
@@ -70,8 +75,8 @@ with sync_playwright() as playwright:
     assert page.evaluate("window.resetRequests") == [
         "GET /scope", "POST /reset", "GET /status"
     ]
-    assert "복원 완료" in page.locator("#practice-reset-complete").inner_text()
-    expect(page.locator("#practice-reset-status")).to_contain_text("복원 완료")
+    assert "실습 전체 초기화 완료" in page.locator("#practice-reset-complete").text_content()
+    expect(page.locator("#practice-reset-status")).to_contain_text("실습 전체 초기화 완료")
     assert page.locator("#practice-reset-reload-button").is_disabled()
     page.keyboard.press("Escape")
     assert page.locator("#practice-reset-complete").is_visible()

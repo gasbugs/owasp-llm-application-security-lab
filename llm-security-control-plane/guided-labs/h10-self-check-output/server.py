@@ -154,7 +154,7 @@ async def execute_case(suite_id: str, case_id: str, execution_id: str) -> dict:
             "input_digest": hashlib.sha256(input_text.encode()).hexdigest(),
             "browser_response_digest": hashlib.sha256(text.encode()).hexdigest(),
             "browser_response_bytes": len(text.encode()),
-            "browser_marker_observed": MARKERS.get(case_id) == text.strip(),
+            "browser_marker_observed": MARKERS.get(case_id, "") in text if case_id in MARKERS else False,
             "activated_rails": [project_rail(item) for item in generated.log.activated_rails],
             "llm_tasks": [item.task for item in generated.log.llm_calls],
         }

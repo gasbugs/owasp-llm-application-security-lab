@@ -15,6 +15,9 @@ while IFS='|' read -r display_id source_path workspace_name services; do
   }
   if [[ ! -e "$workspace_file" ]]; then
     git -C "$SETUP_ROOT" show "HEAD:llm-security-control-plane/$source_path" > "$workspace_file"
+    if [[ "$display_id" == P01-02 || "$display_id" == P01-03 || "$display_id" == P02-01 || "$display_id" == P03-01 || "$display_id" == P04-01 || "$display_id" == P04-02 || "$display_id" == P04-03 || "$display_id" == P04-04 || "$display_id" == P04-05 || "$display_id" == P04-06 || "$display_id" == P04-07 || "$display_id" == P04-08 || "$display_id" == P05-01 || "$display_id" == P05-02 || "$display_id" == P05-03 || "$display_id" == P05-04 || "$display_id" == P06-01 || "$display_id" == P06-02 || "$display_id" == P06-03 || "$display_id" == P06-04 || "$display_id" == P07-01 || "$display_id" == P07-02 ]]; then
+      chmod 0664 "$workspace_file"
+    fi
     printf 'Starter 복제: %s\n' "$workspace_file"
   fi
 done < "$MANIFEST"

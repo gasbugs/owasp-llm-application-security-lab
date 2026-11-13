@@ -200,7 +200,7 @@ def require_csrf(
 def security_headers(response: Response) -> None:
     response.headers["Content-Security-Policy"] = (
         "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; "
-        "connect-src http://127.0.0.1:28198 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; "
+        "connect-src http://127.0.0.1:28198 https://book-neb4p1e6db.tail36e6cc.ts.net:28198 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; "
         "frame-ancestors 'none'"
     )
     response.headers["Referrer-Policy"] = "no-referrer"
@@ -373,6 +373,15 @@ def stylesheet() -> FileResponse:
 @app.get("/app.js")
 def javascript() -> FileResponse:
     return FileResponse(ROOT / "app.js", media_type="text/javascript")
+
+@app.get("/block-lab.css")
+def block_lab_stylesheet() -> FileResponse:
+    return FileResponse(ROOT / "block-lab.css", media_type="text/css")
+
+
+@app.get("/block-lab.js")
+def block_lab_javascript() -> FileResponse:
+    return FileResponse(ROOT / "block-lab.js", media_type="text/javascript")
 
 
 @app.get("/livez")
@@ -2519,9 +2528,9 @@ async def run_scanner_checks(activity,url,token):
 async def run_policy_checks(url,token):
     suite_id=str(uuid.uuid4());started=datetime.now(timezone.utc).isoformat()
     body={'suite_id':suite_id,'started_at':started};cases=[]
-    names=['normal-business','normal-explanation','risk-marker','risk-paraphrase','promotion-ledger']
+    names=['normal-business','normal-explanation','risk-marker','risk-paraphrase','normal-quoted','risk-marker-variant','promotion-ledger']
     state=NATIVE_SESSION.get();progress=state['native_progress'] if state else {}
-    progress.update(total=5,cases=cases,phase='running');current=names[0]
+    progress.update(total=len(names),cases=cases,phase='running');current=names[0]
     try:
         async with httpx.AsyncClient(timeout=PROVISION_TIMEOUT) as client:
             for current in names:
@@ -2638,9 +2647,9 @@ async def run_telemetry_checks(url,token):
 
 async def run_incident_checks(url,token):
     suite=str(uuid.uuid4());started=datetime.now(timezone.utc).isoformat();body={'suite_id':suite,'started_at':started};cases=[]
-    names=['0-collected','0-reversed','1-collected','1-reversed','2-collected','2-reversed','missing-log','foreign-trace','open-ledger','duplicate-span'];current=names[0]
+    names=['0-collected','0-reversed','1-collected','1-reversed','2-collected','2-reversed','missing-log','foreign-trace','open-ledger','duplicate-span','missing-stop-stage','wrong-logs-type'];current=names[0]
     state=NATIVE_SESSION.get();progress=state['native_progress'] if state else {}
-    progress.update(total=10,cases=cases,phase='running',current_case={'case_id':current,'status':'관측 자료 준비 중','started_at':started})
+    progress.update(total=len(names),cases=cases,phase='running',current_case={'case_id':current,'status':'관측 자료 준비 중','started_at':started})
     try:
         async with httpx.AsyncClient(timeout=PROVISION_TIMEOUT) as client:
             prepared=await client.post(url+'/v1/prepare/H19',json=body,headers={'Authorization':f'Bearer {token}'})
@@ -3000,6 +3009,63 @@ async def verify_h21_agent_policy(
         raise HTTPException(status_code=502, detail="internal guided service unavailable") from exc
     finally:
         ACTIVE_SESSIONS.discard(session_id)
+
+
+class P23BlockSubmission(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    order: list[str] = Field(min_length=1, max_length=6)
+
+
+class PracticeBlockSubmission(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    order: list[str] = Field(min_length=1, max_length=9)
+
+
+@app.get("/api/block-practice/{problem}/template")
+def practice_block_template(problem: str):
+    if problem not in ("P01", "P02", "P03", "P04", "P05", "P06", "P07", "P08", "P09", "P10", "P11", "P12", "P13", "P14", "P15", "P16", "P17", "P18", "P19", "P20", "P21", "P22"):
+        raise HTTPException(404, "block practice unavailable")
+    from block_submission import template
+    return {"template": template(problem)}
+
+
+@app.post("/api/block-practice/{problem}/submit")
+def submit_practice_blocks(problem: str, body: PracticeBlockSubmission, session: tuple[str, dict] = Depends(require_csrf)):
+    if problem not in ("P01", "P02", "P03", "P04", "P05", "P06", "P07", "P08", "P09", "P10", "P11", "P12", "P13", "P14", "P15", "P16", "P17", "P18", "P19", "P20", "P21", "P22"):
+        raise HTTPException(404, "block practice unavailable")
+    from block_submission import apply
+    try:
+        return apply(problem, body.order)
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
+    except PermissionError as exc:
+        raise HTTPException(503, "학습자 파일에 쓰기 권한이 없습니다. 실습 파일의 소유자·그룹 쓰기 권한을 확인하세요.") from exc
+    except (OSError, RuntimeError) as exc:
+        raise HTTPException(503, "학습자 파일에 코드를 적용하지 못했습니다. 파일 연결 상태를 확인하세요.") from exc
+
+
+@app.get("/api/block-practice/{problem}/jobs/{job_id}")
+def practice_block_job(problem: str, job_id: str, session: tuple[str, dict] = Depends(require_session)):
+    from block_submission import job_result
+    try:
+        return job_result(problem, job_id)
+    except ValueError as exc:
+        raise HTTPException(404, str(exc)) from exc
+
+
+@app.post("/api/practice/P23/submit-blocks")
+async def submit_p23_blocks(body: P23BlockSubmission, request: Request, session: tuple[str,dict] = Depends(require_session), x_csrf_token: str | None = Header(None)):
+    require_csrf(request, x_csrf_token, session)
+    token = hmac.new(LAB_TOKEN.encode(), b"model-call:P23", "sha256").hexdigest()
+    try:
+        async with httpx.AsyncClient(timeout=10, trust_env=False, follow_redirects=False) as client:
+            response = await native_post(client, "http://guided-model-call:8000/v1/submit-blocks", headers={"Authorization": "Bearer " + token}, json=body.model_dump())
+        response.raise_for_status()
+        return response.json()
+    except httpx.HTTPStatusError as exc:
+        raise HTTPException(exc.response.status_code, exc.response.text[:300]) from exc
+    except httpx.HTTPError as exc:
+        raise HTTPException(502, "모델 연결 앱에 코드를 적용하지 못했습니다.") from exc
 
 
 @app.post("/api/practice/P23/verify")

@@ -6,7 +6,7 @@ models:
   - type: main
     engine: openai
     model: us.amazon.nova-lite-v1:0#h10-main
-    parameters: {temperature: 0.0, max_tokens: 100}
+    parameters: {temperature: 0.0, max_tokens: 512}
   - type: self_check_output
     engine: openai
     model: us.amazon.nova-lite-v1:0#h10-self-check-output

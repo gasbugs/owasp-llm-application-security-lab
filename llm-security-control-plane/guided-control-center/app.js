@@ -560,8 +560,17 @@ function setMissionMenu(open) {
   byId("mission-menu-chevron").setAttribute("d", open ? "m15 6-6 6 6 6" : "m9 6 6 6-6 6");
   byId("mission-menu-toggle").setAttribute("aria-label", open ? "사이드 메뉴 닫기" : "사이드 메뉴 열고 고정하기");
   if (open && !wasOpen) {
-    const selected = byId("mission-menu").querySelector('.tab[aria-selected="true"]') || byId("p00-menu");
-    selected.focus({preventScroll: true});
+    const selected = byId("mission-menu").querySelector('.tab[aria-selected="true"]');
+    if (selected && selected.getClientRects().length) selected.focus({preventScroll: true});
+  }
+}
+function syncMissionMenuViewport() {
+  const mobile = window.matchMedia("(max-width: 760px)").matches;
+  const open = !byId("mission-menu").hidden;
+  byId("mission-menu-backdrop").hidden = !mobile || !open;
+  if (mobile && sidebarPinned) {
+    setSidebarPinned(false);
+    setMissionMenu(false);
   }
 }
 
@@ -588,11 +597,11 @@ function selectWorkspace(name) {
     renderBreadcrumb(null);
     setText("current-station-name", "완료한 미션");
   }
-  setMissionMenu(sidebarPinned && window.matchMedia("(min-width: 761px)").matches);
+  if (window.matchMedia("(max-width: 760px)").matches) setMissionMenu(false);
   if (name === "tutorial") {
     window.scrollTo({top: 0, left: 0, behavior: "instant"});
     byId("tutorial-panel").scrollTop = 0;
-    selectTutorialPane("experience");
+    selectTutorialPane("build");
     byId("p00-menu").setAttribute("aria-current", "page");
     renderBreadcrumb("P00");
     setText("current-station", "P00");
@@ -714,8 +723,8 @@ async function writeClipboard(text) {
 let copyableCodeBlocksEnabled = true;
 
 function highlightPythonBlocks(root = document) {
-  const keywords = new Set(["def", "if", "not", "raise", "try", "except", "as", "from", "return"]);
-  const builtins = new Set(["isinstance", "str", "ValueError", "RuntimeError", "BotoCoreError", "ClientError"]);
+  const keywords = new Set(["def", "async", "await", "if", "else", "elif", "not", "and", "or", "in", "is", "raise", "try", "except", "as", "from", "import", "return", "for", "while", "with", "True", "False", "None"]);
+  const builtins = new Set(["isinstance", "str", "dict", "int", "ValueError", "RuntimeError", "NotImplementedError", "BotoCoreError", "ClientError"]);
   const tokens = /#[^\n]*|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|\b\d+(?:\.\d+)?\b|\b[A-Za-z_]\w*\b/g;
   for (const pre of root.querySelectorAll('pre[data-language="python"]')) {
     if (pre.dataset.highlighted === "true") continue;
@@ -834,7 +843,7 @@ function prepareAdminAnswers() {
   adminAnswerPanel.className = "admin-answer";
   const title = document.createElement("summary"); title.textContent = "관리자 답안";
   const note = document.createElement("p");
-  note.textContent = "현재 문제의 제한된 조건과 Starter만 사용한 독립 풀이입니다.";
+  note.textContent = "현재 문제의 Starter와 해결 조건을 기준으로 한 참고 답안입니다.";
   const output = document.createElement("div"); output.className = "admin-answer-content";
   adminAnswerPanel.append(title, note, output);
 }
@@ -843,10 +852,14 @@ function prepareMissionPanes() {
   const body = byId("practice-workbench").querySelector(".work-body");
   const guidance = document.createElement("div"); guidance.id = "mission-guidance";
   const execution = document.createElement("section"); execution.id = "mission-execution";
+  const divider = document.createElement("div"); divider.className = "workspace-divider";
+  divider.setAttribute("role", "separator"); divider.setAttribute("aria-label", "문제와 작업 공간 너비 조절");
+  divider.setAttribute("aria-orientation", "vertical"); divider.setAttribute("aria-valuemin", "25");
+  divider.setAttribute("aria-valuemax", "70"); divider.setAttribute("aria-valuenow", "38"); divider.tabIndex = 0;
   const title = document.createElement("h3"); title.textContent = "문제 해결";
   const actions = document.createElement("div"); actions.id = "mission-execution-actions";
-  execution.append(title, byId("h23-experience-tabs"), byId("h23-experience"), byId("mission-experience"), byId("resource-operation"), actions);
-  body.append(guidance, execution);
+  execution.append(title, byId("h23-experience-tabs"), byId("h23-build-panel"), byId("h23-experience"), byId("mission-experience"), byId("resource-operation"), actions);
+  body.append(guidance, divider, execution);
   const gateway = byId("h01-work");
   const context = gateway.querySelector(".mission-context");
   gateway.querySelector(".p01-statement").prepend(context);
@@ -972,10 +985,11 @@ function prepareMissionPanes() {
   }
 }
 
+const blockPracticeProblems = new Set(["P23", "P02", "P03", "P04", "P05", "P06", "P07", "P08", "P09", "P10", "P11", "P12", "P13", "P14", "P15", "P16", "P17", "P18", "P19", "P20", "P21", "P22"]);
 let p01ResultHomes = [];
 function arrangeP01Results(active) {
   if (!p01ResultHomes.length) {
-    const nodes = [byId("grading-checked-at"), byId("case-results"), byId("case-progress"), document.querySelector(".inspection"), byId("failure-help"), byId("raw").closest("details"), document.querySelector(".receipt")];
+    const nodes = [byId("grading-checked-at"), byId("failure-help"), byId("case-results"), byId("case-progress"), document.querySelector(".inspection"), byId("raw").closest("details"), document.querySelector(".receipt")];
     p01ResultHomes = nodes.map(node => {
       const home = document.createComment("result home");
       node.before(home);
@@ -1058,8 +1072,8 @@ function selectTab(index, problem = practiceGroups[index][0]) {
     byId("case-results").hidden = true;
     setText("request-status", "검증을 시작하면 이곳에서 요청 상태를 확인할 수 있습니다.");
   }
-  if (problem === "P01") selectP01Pane("model");
-  else selectModelCallPane("experience", false);
+  if (problem === "P01") selectP01Pane("build");
+  else selectModelCallPane(blockPracticeProblems.has(problem) ? "build" : "experience", false);
 }
 
 function renderOfficialUis(items) {
@@ -1296,6 +1310,7 @@ function renderResourceProgress(progress) {
 function renderEnvelope(payload) {
   showMissionResults();
   renderReportedCases(payload);
+  renderLearningSupport(payload);
   setText("raw", rawResponses.get(payload) ?? JSON.stringify(payload, null, 2));
   if (payload.resource_ready === true || payload.resource_deleted === true) {
     if (payload.activity_id === "P02") {
@@ -1504,18 +1519,24 @@ function verificationSummary(payload) {
     verdict: payload.course_verdict, stage: payload.stage_calls?.at(-1)?.stage || "미확인"};
 }
 
-function failureCategory(payload) {
-  const labels = {input: "입력", implementation: "구현", environment: "환경", evidence: "증거"};
-  if (Object.hasOwn(labels, payload.failure_category)) return labels[payload.failure_category];
-  if (payload.http_status === 422) return "입력";
-  if (payload.http_status === 501) return "구현";
-  if (["credentials_missing", "credentials_invalid", "access_denied", "model_unavailable", "provider_error"].includes(payload.provider_error)) return "환경";
-  return "미분류 — 응답만으로 원인을 확정하지 못했습니다";
-}
-
-function renderLearningSupport(payload, problem) {
-  byId("failure-help").hidden = payload.course_verdict !== "ERR";
-  setText("failure-category", `확인할 범위: ${failureCategory(payload)}. 아래에서 해당 항목을 확인하세요.`);
+function renderLearningSupport(payload) {
+  const panel = byId("failure-help");
+  panel.hidden = payload.course_verdict !== "ERR";
+  if (panel.hidden) return;
+  const cases = payload.result?.cases ?? payload.cases ?? [];
+  const failed = Array.isArray(cases) ? cases.find(item => item.status === "ERR" || item.case_verified === false || item.error) : null;
+  const cause = failed?.reason || failed?.error || payload.reason || payload.diagnosis?.cause || payload.error;
+  setText("failure-category", failed?.case_id ? `실패한 사례: ${failed.case_id}` : "현재 실행에서 오류가 발생했습니다.");
+  setText("failure-cause", cause || "서버 응답에 구체적인 실패 원인이 없습니다. 현재 실행의 기록을 더 확인해야 합니다.");
+  const stage = failed?.stopped_stage || payload.diagnosis?.stopped_stage;
+  byId("failure-stage").hidden = !stage;
+  setText("failure-stage", stage ? `멈춘 단계: ${stage}` : "");
+  const action = payload.diagnosis?.next_action || payload.next_check;
+  byId("failure-action").hidden = !action;
+  setText("failure-action", action ? `수정·재확인: ${action}` : "");
+  const command = payload.diagnosis?.log_command;
+  byId("failure-logs").hidden = !command;
+  setText("failure-log-command", command || "");
 }
 
 function renderError(error) {
@@ -1633,7 +1654,7 @@ function createCaseCard(item, index) {
   const tone = ["PASS", "ASSERTION PASS", "ANALYSIS PASS"].includes(status) ? "pass" : status === "HIT" ? "hit" : status === "ERR" ? "err" : "neutral";
   row.className = `case-card case-${tone}`;
   const heading = document.createElement("div"); heading.className = "case-card-heading";
-  const title = document.createElement("strong"); title.textContent = `케이스 ${item.number ?? index + 1} · ${({"execution-limits":"실행 제한 확인","native-tool-report":"실제 도구 실행과 보고서 검증","normal-business":"정상 업무 요청","normal-explanation":"공격 문자열을 설명하는 정상 요청","risk-marker":"공격 표지 요청","risk-paraphrase":"표현을 바꾼 공격 요청","promotion-ledger":"정책 승격·되돌리기 원장","normal-lookup":"정상 공지 조회","unauthorized-publish":"권한 없는 공지 게시","anonymous-lookup":"인증되지 않은 공지 조회","normal-query":"정상 요청 기록 조회","denied-query":"거부 요청 기록 조회","0-collected":"정상 요청 기록 분석","0-reversed":"정상 요청 기록 순서 뒤집기","1-collected":"인가 거부 기록 분석","1-reversed":"인가 거부 기록 순서 뒤집기","2-collected":"인증 거부 기록 분석","2-reversed":"인증 거부 기록 순서 뒤집기","missing-log":"로그가 빠진 사본","foreign-trace":"다른 Trace가 섞인 사본","open-ledger":"끝나지 않은 처리 원장","duplicate-span":"Span이 중복된 사본","forbidden-model":"금지 모델 호출","untrusted-server":"허용하지 않은 MCP 서버","forbidden-tool":"허용하지 않은 도구","tool-loop":"도구 호출 횟수 초과","oversized-result":"도구 결과 크기 초과","tool-timeout":"도구 응답 시간 초과","foreign-state":"다른 Agent의 상태 접근","wrong-audience":"다른 서버용 인증 정보","configuration-binding":"설정 파일과 실제 적용 상태","alert-lifecycle":"실제 경보 발생·해제","no-approval":"승인 없는 공지 게시","self-approval":"요청자의 자기 승인","changed-args":"승인 뒤 게시 내용 변경","expired":"만료된 승인 사용","approved":"정확한 승인으로 한 번 게시","reuse":"사용한 승인 재사용"})[item.case_id] ?? item.case_id ?? item.id ?? item.name ?? item.request_id ?? "실행 기록"}`;
+  const title = document.createElement("strong"); title.textContent = `케이스 ${item.number ?? index + 1} · ${({"execution-limits":"실행 제한 확인","native-tool-report":"실제 도구 실행과 보고서 검증","normal-business":"정상 업무 요청","normal-explanation":"공격 문자열을 설명하는 정상 요청","risk-marker":"공격 표지 요청","risk-paraphrase":"표현을 바꾼 공격 요청","normal-quoted":"공격 문장 인용 분석","risk-marker-variant":"공백·동사를 바꾼 직접 공격","promotion-ledger":"정책 승격·되돌리기 원장","normal-lookup":"정상 공지 조회","unauthorized-publish":"권한 없는 공지 게시","anonymous-lookup":"인증되지 않은 공지 조회","normal-query":"정상 요청 기록 조회","denied-query":"거부 요청 기록 조회","0-collected":"정상 요청 기록 분석","0-reversed":"정상 요청 기록 순서 뒤집기","1-collected":"인가 거부 기록 분석","1-reversed":"인가 거부 기록 순서 뒤집기","2-collected":"인증 거부 기록 분석","2-reversed":"인증 거부 기록 순서 뒤집기","missing-log":"로그가 빠진 사본","foreign-trace":"다른 Trace가 섞인 사본","open-ledger":"끝나지 않은 처리 원장","duplicate-span":"Span이 중복된 사본","missing-stop-stage":"중단 단계가 빠진 사본","wrong-logs-type":"로그 배열 형식이 잘못된 사본","forbidden-model":"금지 모델 호출","untrusted-server":"허용하지 않은 MCP 서버","forbidden-tool":"허용하지 않은 도구","tool-loop":"도구 호출 횟수 초과","oversized-result":"도구 결과 크기 초과","tool-timeout":"도구 응답 시간 초과","foreign-state":"다른 Agent의 상태 접근","wrong-audience":"다른 서버용 인증 정보","configuration-binding":"설정 파일과 실제 적용 상태","alert-lifecycle":"실제 경보 발생·해제","no-approval":"승인 없는 공지 게시","self-approval":"요청자의 자기 승인","changed-args":"승인 뒤 게시 내용 변경","expired":"만료된 승인 사용","approved":"정확한 승인으로 한 번 게시","reuse":"사용한 승인 재사용"})[item.case_id] ?? item.case_id ?? item.id ?? item.name ?? item.request_id ?? "실행 기록"}`;
   const badge = document.createElement("span"); badge.className = `case-badge ${tone}`; badge.textContent = String(status);
   heading.append(title, badge);
   if (item.started_at || item.elapsed_seconds !== undefined) {
@@ -1800,7 +1821,7 @@ function renderCaseProgress(progress) {
 }
 
 function selectP01Pane(name) {
-  for (const item of ["model", "grade"]) {
+  for (const item of ["build", "model", "grade"]) {
     const selected = item === name;
     byId(`p01-${item}-panel`).hidden = !selected;
     byId(`p01-${item}-tab`).setAttribute("aria-selected", String(selected));
@@ -1954,7 +1975,6 @@ async function execute(path, body) {
       document.querySelector(".receipt").hidden = true;
     }
     setText("request-status", "응답 오류로 결과를 확정하지 못했습니다. 원시 오류를 확인하세요. 서버 작업이 끝났는지는 별도로 확인해야 합니다.");
-    if (problem) renderLearningSupport({...error.detail, http_status: error.httpStatus, course_verdict: "ERR"}, problem);
   } finally {
     resourceStopped = true;
     clearTimeout(resourceTimer);
@@ -1972,9 +1992,9 @@ const viewStorageKey = "guided-current-view";
 function saveCurrentView() {
   if (!viewReady) return;
   const workspace = !byId("home-panel").hidden ? "home" : !byId("tutorial-panel").hidden ? "tutorial" : "missions";
-  const pane = workspace === "tutorial" ? (byId("tutorial-grade-tab").getAttribute("aria-selected") === "true" ? "grade" : "experience")
-    : activeProblem === "P01" ? (byId("p01-grade-tab").getAttribute("aria-selected") === "true" ? "grade" : "experience")
-    : byId("h23-grade-tab").getAttribute("aria-selected") === "true" ? "grade" : "experience";
+  const pane = workspace === "tutorial" ? (byId("tutorial-build-tab").getAttribute("aria-selected") === "true" ? "build" : byId("tutorial-grade-tab").getAttribute("aria-selected") === "true" ? "grade" : "experience")
+    : activeProblem === "P01" ? (byId("p01-build-tab").getAttribute("aria-selected") === "true" ? "build" : byId("p01-grade-tab").getAttribute("aria-selected") === "true" ? "grade" : "experience")
+    : byId("h23-build-tab").getAttribute("aria-selected") === "true" ? "build" : byId("h23-grade-tab").getAttribute("aria-selected") === "true" ? "grade" : "experience";
   const scroll = {};
   for (const id of ["mission-guidance", "mission-execution", "tutorial-panel"]) scroll[id] = byId(id)?.scrollTop || 0;
   try { sessionStorage.setItem(viewStorageKey, JSON.stringify({workspace, problem:activeProblem, pane, scroll, y:window.scrollY})); } catch {}
@@ -1983,13 +2003,13 @@ function restoreCurrentView() {
   let view;
   try { view = JSON.parse(sessionStorage.getItem(viewStorageKey)); } catch { return; }
   if (!view || !["home", "tutorial", "missions"].includes(view.workspace)) return;
-  if (!["experience", "grade"].includes(view.pane)) return;
+  if (!["build", "experience", "grade"].includes(view.pane)) return;
   if (view.workspace === "missions") {
     const index = practiceGroups.findIndex(group => group.includes(view.problem));
     if (index < 0) return;
     selectTab(index, view.problem);
-    if (view.problem === "P01") selectP01Pane(view.pane === "grade" ? "grade" : "model");
-    else selectModelCallPane(view.pane);
+    if (view.problem === "P01") selectP01Pane(view.pane === "build" ? "build" : view.pane === "grade" ? "grade" : "model");
+    else selectModelCallPane(view.pane === "build" && !blockPracticeProblems.has(view.problem) ? "experience" : view.pane);
   } else {
     selectWorkspace(view.workspace);
     if (view.workspace === "tutorial") selectTutorialPane(view.pane);
@@ -2006,6 +2026,7 @@ document.addEventListener("visibilitychange", () => { if (document.visibilitySta
 async function bootstrap() {
   renderTabs();
   bindActionTips();
+  if (window.matchMedia("(max-width: 760px)").matches && sidebarPinned) setSidebarPinned(false);
   setMissionMenu(sidebarPinned && window.matchMedia("(min-width: 761px)").matches);
   renderPracticeProgress();
   const response = await fetch("/api/bootstrap");
@@ -2102,6 +2123,7 @@ window.addEventListener("focus", () => {
 });
 
 applyTheme(readThemeMode());
+restoreRunningReset().catch(renderError);
 bootstrap().catch(renderError);
 
 for (const [index, name] of ["home", "missions"].entries()) {
@@ -2118,23 +2140,26 @@ for (const [index, name] of ["home", "missions"].entries()) {
 }
 byId("mission-menu-toggle").addEventListener("click", () => {
   const open = byId("mission-menu").hidden;
-  setSidebarPinned(open); setMissionMenu(open);
+  if (window.matchMedia("(min-width: 761px)").matches) setSidebarPinned(open);
+  setMissionMenu(open);
 });
+window.addEventListener("resize", syncMissionMenuViewport);
 for (const id of ["mission-menu-backdrop"]) byId(id).addEventListener("click", () => {setSidebarPinned(false); setMissionMenu(false); byId("mission-menu-toggle").focus();});
 byId("p00-menu").addEventListener("click", () => selectWorkspace("tutorial"));
 byId("p00-menu").addEventListener("keydown", handleMissionMenuKey);
 document.addEventListener("keydown", event => {
   if (byId("mission-menu").hidden) return;
   if (event.key === "Escape") {setSidebarPinned(false); setMissionMenu(false); byId("mission-menu-toggle").focus();}
-  if (event.key === "Tab") {
-    const controls = [...byId("mission-menu").querySelectorAll("button:not(:disabled)")];
+  if (event.key === "Tab" && window.matchMedia("(max-width: 760px)").matches) {
+    const controls = [...byId("mission-menu").querySelectorAll("button:not(:disabled), summary")]
+      .filter(control => control.getClientRects().length);
     const first = controls[0], last = controls[controls.length - 1];
     if (event.shiftKey && document.activeElement === first) {event.preventDefault(); last.focus();}
     else if (!event.shiftKey && document.activeElement === last) {event.preventDefault(); first.focus();}
   }
 });
 function selectTutorialPane(name) {
-  for (const pane of ["experience", "grade"]) {
+  for (const pane of ["build", "experience", "grade"]) {
     const selected = name === pane;
     const tab = byId(`tutorial-${pane}-tab`);
     tab.setAttribute("aria-selected", String(selected));
@@ -2142,7 +2167,7 @@ function selectTutorialPane(name) {
     byId(`tutorial-${pane}-panel`).hidden = !selected;
   }
 }
-for (const pane of ["experience", "grade"]) {
+for (const pane of ["build", "experience", "grade"]) {
   byId(`tutorial-${pane}-tab`).addEventListener("click", () => selectTutorialPane(pane));
 }
 async function refreshTutorialResult(celebrate = false) {
@@ -2166,7 +2191,7 @@ async function refreshTutorialResult(celebrate = false) {
       recordTutorialCompletion(result, true);
     }
     setText("tutorial-received", result.received !== undefined ? JSON.stringify(result.received, null, 2) : (result.completed ? "완료 기록이 저장되어 있습니다. 요청을 다시 제출하면 받은 JSON을 확인할 수 있습니다." : "아직 확인할 JSON 요청이 없습니다."));
-    setText("tutorial-status", result.received !== undefined ? "서버가 받은 JSON 원본입니다. 작성한 파일과 대조하세요." : "표시할 요청 원본이 없습니다. 왼쪽 명령으로 파일을 제출하세요.");
+    setText("tutorial-status", result.received !== undefined ? "서버가 받은 JSON 원본입니다. 작성한 파일과 대조하세요." : "표시할 요청 원본이 없습니다. 문제 풀기 탭이나 터미널 안내에서 제출하세요.");
   } catch (error) { setText(celebrate ? "tutorial-grade-status" : "tutorial-status", error.message);
     if (celebrate) displayTutorialGrade({completed: false, feedback: error.message});
   } finally { clearInterval(timer); if (celebrate) button.disabled = false; }
@@ -2180,13 +2205,107 @@ byId("breadcrumb-category").addEventListener("click", () => {
 });
 byId("breadcrumb-home").addEventListener("click", () => selectWorkspace("home"));
 byId("navigation-home").addEventListener("click", () => selectWorkspace("home"));
+async function restoreRunningReset() {
+  const endpoint = location.hostname === "book-neb4p1e6db.tail36e6cc.ts.net"
+    ? "https://book-neb4p1e6db.tail36e6cc.ts.net:28198" : "http://127.0.0.1:28198";
+  let response;
+  try { response = await fetch(`${endpoint}/status`, {cache: "no-store"}); }
+  catch { return; }
+  if (!response.ok) return;
+  let state = await response.json();
+  if (state.state !== "running") return;
+  const reset = state.action === "reset";
+  const dialog = byId(reset ? "practice-reset-running" : "settings-action-running");
+  const bar = byId(reset ? "practice-reset-running-progress" : "settings-action-progress");
+  const percent = byId(reset ? "practice-reset-running-percent" : "settings-action-percent");
+  const detail = byId(reset ? "practice-reset-running-detail" : "settings-action-detail");
+  const preventDismiss = event => event.preventDefault();
+  if (!reset) byId("settings-action-title").textContent = state.action === "aws" ? "AWS 실습 자원 삭제" : "완료 기록 초기화";
+  dialog.addEventListener("cancel", preventDismiss);
+  dialog.showModal();
+  document.body.classList.add("practice-reset-locked");
+  try {
+    for (;;) {
+      const value = Math.max(0, Math.min(100, Number(state.percent) || 0));
+      bar.value = value; percent.textContent = `${value}%`;
+      detail.textContent = state.detail || "진행 상태를 확인하고 있습니다.";
+      if (state.state !== "running") break;
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      response = await fetch(`${endpoint}/status`, {cache: "no-store"});
+      if (!response.ok) throw new Error("진행 상태를 다시 읽지 못했습니다.");
+      state = await response.json();
+    }
+    if (state.state !== "complete") throw new Error(state.detail || "초기화가 완료되지 않았습니다.");
+    bar.value = 100; percent.textContent = "100%";
+    if (reset) {
+      dialog.close();
+      document.body.classList.remove("practice-reset-locked");
+      await showResetCompletion();
+    } else {
+      const close = byId("settings-action-close");
+      close.disabled = false;
+      await new Promise(resolve => close.addEventListener("click", resolve, {once: true}));
+      dialog.close();
+      if (state.action === "progress") location.reload();
+    }
+  } catch (error) {
+    detail.textContent = `작업 실패: ${error.message}`;
+    byId("practice-reset-status").textContent = detail.textContent;
+    if (reset) dialog.close();
+    else {
+      const close = byId("settings-action-close");
+      close.disabled = false;
+      await new Promise(resolve => close.addEventListener("click", resolve, {once: true}));
+      dialog.close();
+    }
+  } finally {
+    dialog.removeEventListener("cancel", preventDismiss);
+    document.body.classList.remove("practice-reset-locked");
+  }
+}
+
+async function showResetCompletion() {
+  byId("practice-reset-status").textContent = "실습 전체 초기화 완료. 확인을 누르면 화면을 새로고침합니다.";
+  const completeDialog = byId("practice-reset-complete");
+  const reloadButton = byId("practice-reset-reload-button");
+  const reloadProgress = byId("practice-reset-reload-progress");
+  const reloadWait = byId("practice-reset-reload-wait");
+  const readyAt = performance.now() + 10000;
+  reloadButton.disabled = true;
+  reloadButton.textContent = "10초 후 새로고침";
+  reloadProgress.value = 0;
+  reloadWait.textContent = "10초 후 새로고침할 수 있습니다.";
+  const preventDismiss = event => event.preventDefault();
+  completeDialog.addEventListener("cancel", preventDismiss);
+  completeDialog.showModal();
+  const timer = setInterval(() => {
+    const remaining = Math.max(0, readyAt - performance.now());
+    reloadProgress.value = 10 - remaining / 1000;
+    if (remaining > 0) {
+      const seconds = Math.ceil(remaining / 1000);
+      reloadWait.textContent = `${seconds}초 후 새로고침할 수 있습니다.`;
+      reloadButton.textContent = `${seconds}초 후 새로고침`;
+    } else {
+      clearInterval(timer);
+      reloadWait.textContent = "이제 확인하고 새로고침할 수 있습니다.";
+      reloadButton.textContent = "확인하고 새로고침";
+      reloadButton.disabled = false;
+    }
+  }, 100);
+  await new Promise(resolve => completeDialog.addEventListener("close", resolve, {once: true}));
+  clearInterval(timer);
+  completeDialog.removeEventListener("cancel", preventDismiss);
+  location.reload();
+}
+
 byId("practice-reset-button").addEventListener("click", async () => {
   const button = byId("practice-reset-button");
   const status = byId("practice-reset-status");
   const runningDialog = byId("practice-reset-running");
   const runningDetail = byId("practice-reset-running-detail");
   const preventResetDismiss = event => event.preventDefault();
-  const endpoint = "http://127.0.0.1:28198";
+  const endpoint = location.hostname === "book-neb4p1e6db.tail36e6cc.ts.net"
+    ? "https://book-neb4p1e6db.tail36e6cc.ts.net:28198" : "http://127.0.0.1:28198";
   button.disabled = true;
   try {
     const dialog = byId("practice-reset-confirm");
@@ -2194,6 +2313,8 @@ byId("practice-reset-button").addEventListener("click", async () => {
     dialog.showModal();
     await new Promise(resolve => dialog.addEventListener("close", resolve, {once: true}));
     if (dialog.returnValue !== "yes") { status.textContent = "초기화를 취소했습니다."; return; }
+    byId("practice-reset-running-progress").removeAttribute("value");
+    byId("practice-reset-running-percent").textContent = "대상 확인 중";
     runningDetail.textContent = "복원 대상을 확인하는 중입니다.";
     runningDialog.addEventListener("cancel", preventResetDismiss);
     runningDialog.showModal();
@@ -2203,6 +2324,8 @@ byId("practice-reset-button").addEventListener("click", async () => {
     const scope = await scopeResponse.json();
     if (!scopeResponse.ok) throw new Error(scope.error || "대상 확인 실패");
     const awsCount = Object.values(scope.aws_resources).reduce((sum, count) => sum + count, 0);
+    byId("practice-reset-running-progress").value = 0;
+    byId("practice-reset-running-percent").textContent = "0%";
     status.textContent = `복원 대상 검사 완료: 풀이 코드 ${scope.practice_files}개, 미션 컨테이너 ${scope.mission_containers}개, 전용 볼륨 ${scope.mission_volumes}개, AWS 자원 ${awsCount}개, P00 요청 파일 ${scope.p00_request ? "있음" : "없음"}, 진행 기록. 복원을 시작합니다.`;
     runningDetail.textContent = "대상 검사를 마쳤습니다. 풀이 코드와 미션 자원을 초기 상태로 돌리는 중입니다.";
     const response = await fetch(`${endpoint}/reset`, {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({confirm: "YES"})});
@@ -2214,41 +2337,18 @@ byId("practice-reset-button").addEventListener("click", async () => {
       const poll = await fetch(`${endpoint}/status`, {cache: "no-store"});
       const state = await poll.json();
       if (!poll.ok) throw new Error(state.error || "진행 상태 조회 실패");
+      const percent = Math.max(0, Math.min(100, Number(state.percent) || 0));
+      byId("practice-reset-running-progress").value = percent;
+      byId("practice-reset-running-percent").textContent = `${percent}%`;
+      if (state.detail) runningDetail.textContent = state.detail;
       if (state.state === "running") continue;
       if (state.state === "complete") {
+        byId("practice-reset-running-progress").value = 100;
+        byId("practice-reset-running-percent").textContent = "100%";
         runningDialog.close();
         document.body.classList.remove("practice-reset-locked");
-        status.textContent = "초기 상태로 복원 완료. 확인을 누르면 화면을 새로고침합니다.";
-        const completeDialog = byId("practice-reset-complete");
-        const reloadButton = byId("practice-reset-reload-button");
-        const reloadProgress = byId("practice-reset-reload-progress");
-        const reloadWait = byId("practice-reset-reload-wait");
-        const readyAt = performance.now() + 10000;
-        reloadButton.disabled = true;
-        reloadButton.textContent = "10초 후 새로고침";
-        reloadProgress.value = 0;
-        reloadWait.textContent = "10초 후 새로고침할 수 있습니다.";
-        const preventDismiss = event => event.preventDefault();
-        completeDialog.addEventListener("cancel", preventDismiss);
-        completeDialog.showModal();
-        const timer = setInterval(() => {
-          const remaining = Math.max(0, readyAt - performance.now());
-          reloadProgress.value = 10 - remaining / 1000;
-          if (remaining > 0) {
-            const seconds = Math.ceil(remaining / 1000);
-            reloadWait.textContent = `${seconds}초 후 새로고침할 수 있습니다.`;
-            reloadButton.textContent = `${seconds}초 후 새로고침`;
-          } else {
-            clearInterval(timer);
-            reloadWait.textContent = "이제 확인하고 새로고침할 수 있습니다.";
-            reloadButton.textContent = "확인하고 새로고침";
-            reloadButton.disabled = false;
-          }
-        }, 100);
-        await new Promise(resolve => completeDialog.addEventListener("close", resolve, {once: true}));
-        clearInterval(timer);
-        completeDialog.removeEventListener("cancel", preventDismiss);
-        location.reload();
+        status.textContent = "실습 전체 초기화 완료. 확인을 누르면 화면을 새로고침합니다.";
+        await showResetCompletion();
         return;
       }
       throw new Error(state.detail || "초기화 결과를 확인하지 못했습니다.");
@@ -2262,18 +2362,103 @@ byId("practice-reset-button").addEventListener("click", async () => {
     button.disabled = false;
   }
 });
+byId("settings-toggle").addEventListener("click", () => {
+  const menu = byId("settings-menu");
+  menu.hidden = !menu.hidden;
+  byId("settings-toggle").setAttribute("aria-expanded", String(!menu.hidden));
+});
+document.addEventListener("click", event => {
+  if (event.target.closest(".settings-control")) return;
+  byId("settings-menu").hidden = true;
+  byId("settings-toggle").setAttribute("aria-expanded", "false");
+});
+document.addEventListener("keydown", event => {
+  if (event.key !== "Escape") return;
+  byId("settings-menu").hidden = true;
+  byId("settings-toggle").setAttribute("aria-expanded", "false");
+});
+async function runSettingsAction(action) {
+  const status = byId("practice-reset-status");
+  const button = byId(action === "aws" ? "settings-aws-delete" : "settings-progress-reset");
+  const endpoint = location.hostname === "book-neb4p1e6db.tail36e6cc.ts.net"
+    ? "https://book-neb4p1e6db.tail36e6cc.ts.net:28198" : "http://127.0.0.1:28198";
+  const dialog = byId("settings-action-running");
+  const detail = byId("settings-action-detail");
+  const bar = byId("settings-action-progress");
+  const percentLabel = byId("settings-action-percent");
+  const close = byId("settings-action-close");
+  const preventDismiss = event => event.preventDefault();
+  dialog.addEventListener("cancel", preventDismiss);
+  button.disabled = true;
+  try {
+    let message;
+    if (action === "aws") {
+      byId("settings-action-title").textContent = "AWS 실습 자원 확인 중";
+      bar.removeAttribute("value"); percentLabel.textContent = "대상 확인 중";
+      close.disabled = true; detail.textContent = "삭제할 실습 자원을 확인하고 있습니다.";
+      dialog.showModal();
+      const response = await fetch(`${endpoint}/scope`, {cache: "no-store"});
+      const scope = await response.json();
+      if (!response.ok) throw new Error(scope.error || "AWS 자원 범위를 확인하지 못했습니다.");
+      const count = Object.values(scope.aws_resources).reduce((sum, amount) => sum + amount, 0);
+      dialog.close();
+      message = `이 실습이 소유한 AWS 자원 ${count}개만 삭제합니다. 풀이 코드·완료 기록·Docker 자원은 유지합니다. 계속할까요?`;
+    } else {
+      message = "24개 미션의 완료 기록만 지웁니다. 풀이 코드·AWS·Docker 자원은 유지합니다. 계속할까요?";
+    }
+    if (!window.confirm(message)) { status.textContent = "취소했습니다."; return; }
+    byId("settings-action-title").textContent = action === "aws" ? "AWS 실습 자원 삭제" : "완료 기록 초기화";
+    bar.value = 0; percentLabel.textContent = "0%"; close.disabled = true;
+    detail.textContent = "작업을 시작하고 있습니다.";
+    dialog.showModal();
+    status.textContent = action === "aws" ? "AWS 자원을 찾고 삭제하고 있습니다…" : "진도 기록을 초기화하고 있습니다…";
+    const started = await fetch(`${endpoint}/${action}`, {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({confirm: "YES"})});
+    const result = await started.json();
+    if (!started.ok) throw new Error(result.error || "작업을 시작하지 못했습니다.");
+    for (;;) {
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      const response = await fetch(`${endpoint}/status`, {cache: "no-store"});
+      const state = await response.json();
+      if (!response.ok) throw new Error(state.error || "작업 상태를 확인하지 못했습니다.");
+      const percent = Math.max(0, Math.min(100, Number(state.percent) || 0));
+      bar.value = percent; percentLabel.textContent = `${percent}%`;
+      if (state.detail) detail.textContent = state.detail;
+      if (state.state === "running") continue;
+      if (state.state !== "complete") throw new Error(state.detail || "작업이 완료되지 않았습니다.");
+      bar.value = 100; percentLabel.textContent = "100%";
+      status.textContent = state.detail;
+      close.disabled = false;
+      await new Promise(resolve => close.addEventListener("click", resolve, {once: true}));
+      dialog.close();
+      if (action === "progress") location.reload();
+      return;
+    }
+  } catch (error) {
+    status.textContent = `작업 실패: ${error.message}`;
+    if (dialog.open) {
+      detail.textContent = `작업 실패: ${error.message}`;
+      close.disabled = false;
+      await new Promise(resolve => close.addEventListener("click", resolve, {once: true}));
+      dialog.close();
+    }
+  }
+  finally { dialog.removeEventListener("cancel", preventDismiss); button.disabled = false; }
+}
+byId("settings-aws-delete").addEventListener("click", () => runSettingsAction("aws"));
+byId("settings-progress-reset").addEventListener("click", () => runSettingsAction("progress"));
 byId("home-next").addEventListener("click", () => {
   const problem = byId("home-next").dataset.problem;
   if (problem === "P00") selectWorkspace("tutorial");
   else if (problem) selectTab(practiceGroups.findIndex(group => group.includes(problem)), problem);
   else setMissionMenu(true);
 });
-for (const [index, name] of ["model", "grade"].entries()) {
+for (const [index, name] of ["build", "model", "grade"].entries()) {
   byId(`p01-${name}-tab`).addEventListener("click", () => selectP01Pane(name));
   byId(`p01-${name}-tab`).addEventListener("keydown", event => {
     if (["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) {
       event.preventDefault();
-      const next = event.key === "Home" ? "model" : event.key === "End" ? "grade" : index === 0 ? "grade" : "model";
+      const panes = ["build", "model", "grade"];
+      const next = event.key === "Home" ? panes[0] : event.key === "End" ? panes.at(-1) : panes[(index + (event.key === "ArrowLeft" ? panes.length - 1 : 1)) % panes.length];
       selectP01Pane(next); byId(`p01-${next}-tab`).focus();
     }
   });
@@ -2285,7 +2470,7 @@ byId("h23-verify").addEventListener("click", () => execute("/api/practice/P23/ve
 const experienceFunctions = {
   P02:["문서 저장·임베딩", "입력 검사, 원문 저장, 임베딩 호출을 현재 함수로 실행합니다."],
   P03:["문서 동기화·검색", "현재 동기화 작업의 상태에 따라 검색이 호출되는지 확인합니다."],
-  P04:["관리형 Guardrail 모델", "AWS 자원 관리에서 이메일 보호 정책을 준비하고 상태를 확인하세요. 정상·이메일 입력 시나리오는 미션 채점 결과 탭의 미션 채점 버튼으로 실행합니다."],
+  P04:["관리형 Guardrail 모델", "문제 풀기에서 이메일 보호 정책 자원을 준비하고 상태를 확인하세요. 정상·이메일 입력 시나리오는 미션 채점 결과 탭의 미션 채점 버튼으로 실행합니다."],
   P05:["Dialog Rail 모델", "입력한 상담 질문 한 건을 현재 Colang 흐름으로 처리합니다."],
   P06:["Python Action", "조회·송금 요구·우회 이름·범위 밖 요청에 현재 Action 정책을 적용합니다."],
   P07:["일반 위해 Self-check 모델", "현재 입력 검사와 Main Model 호출 흐름을 실행합니다."],
@@ -2369,7 +2554,7 @@ function showExperienceSummary(payload) {
     const facts=document.createElement("dl");facts.className="native-result-facts";
     const labels={kind:"Action 결과",action_id:"실행한 Action",balance_before:"처리 전 잔액",balance_after:"처리 후 잔액",status:"실행 결과",execution_status:"기능 실행 상태",execution_error:"실행 오류",exit_code:"도구 종료 코드",reason:"처리 사유",score:"도구 점수",success:"도구 검사 결과",stop_reason:"응답 종료",main_called:"Main 호출",guard_calls:"입력 검사 호출",main_calls:"Main 호출",self_check_calls:"Self-check 호출",downstream_count:"뒤 서비스 호출",policy_rule:"적용 규칙",decision:"처리 결정",run_state:"실행 상태",selected_document_id:"검색된 문서",selected_source_uri:"문서 출처",selected_score:"검색 점수",provider_calls:"모델 호출",tool_calls:"도구 호출",effect_count:"실제 변경 횟수",is_error:"도구 오류",user_intent:"인식한 요청",bot_intent:"선택한 답변",flow:"실행한 흐름",source_digest:"적용 코드",trace_id:"Trace ID",request_id:"Request ID",upstream_called:"뒤 서비스 호출",stop_stage:"멈춘 단계"};
     for(const [key,label] of Object.entries(labels))if(row[key]!==undefined){const name=document.createElement("dt"),value=document.createElement("dd");name.textContent=label;value.textContent=String(row[key]);facts.append(name,value);}
-    if(row.documents){for(const document of row.documents){const section=document.createElement("section");section.className="native-document";const title=document.createElement("strong");title.textContent=document.id || "검색 문서";const body=document.createElement("p");body.textContent=document.body || document.content || "";section.append(title,body);if(document.source_uri){const source=document.createElement("small");source.textContent=document.source_uri;section.append(source);}card.append(section);}
+    if(row.documents){for(const item of row.documents){const section=document.createElement("section");section.className="native-document";const title=document.createElement("strong");title.textContent=item.id || "검색 문서";const body=document.createElement("p");body.textContent=item.body || item.content || "";section.append(title,body);if(item.source_uri){const source=document.createElement("small");source.textContent=item.source_uri;section.append(source);}card.append(section);}
       if(!row.documents.length){const empty=document.createElement("p");empty.textContent="현재 요청에 제공할 문서가 없습니다.";card.append(empty);}}
     if(["not_implemented","error","ERR"].includes(row.execution_status || row.status)){
       const hint=document.createElement("p");hint.className="native-execution-error";
@@ -2398,35 +2583,44 @@ function showExperienceSummary(payload) {
 }
 
 function selectModelCallPane(name, restore = true) {
+  const build = blockPracticeProblems.has(activeProblem) && name === "build";
   const experience = activeProblem !== "P01" && name === "experience";
+  byId("h23-build-tab").hidden = !blockPracticeProblems.has(activeProblem);
+  byId("h23-build-panel").hidden = !build;
   byId("h23-experience").hidden = !experience || activeProblem !== "P23";
   byId("mission-experience").hidden = !experience || activeProblem === "P23";
   for (const group of byId("mission-resource-actions").children) {
-    group.hidden = group.dataset.problem !== activeProblem;
+    const blockResource = blockPracticeProblems.has(activeProblem) && ["P02", "P03", "P04"].includes(activeProblem);
+    group.hidden = group.dataset.problem !== activeProblem || blockResource;
     if (!group.hidden) group.querySelector(".aws-resource-toolbar")?.after(byId("resource-operation"));
   }
   byId("guardrail-chat-form").hidden = !experience || activeProblem !== "P04";
   byId("knowledge-search-form").hidden = !experience || activeProblem !== "P03";
   byId("document-upload-form").hidden = !experience || activeProblem !== "P02";
-  byId("aws-console-links").hidden = !["P02", "P03", "P04"].includes(activeProblem);
-  byId("aws-console-help").hidden = !["P02", "P03", "P04"].includes(activeProblem);
+  const standaloneAwsControls = ["P02", "P03", "P04"].includes(activeProblem) && !blockPracticeProblems.has(activeProblem);
+  byId("aws-console-links").hidden = !standaloneAwsControls;
+  byId("aws-console-help").hidden = !standaloneAwsControls;
   renderAwsConsoleLinks(activeProblem);
   byId("mission-experience-run").hidden = ["P02", "P03", "P04"].includes(activeProblem);
   byId("mission-experience-intro").hidden = ["P02", "P03", "P04"].includes(activeProblem);
   byId("mission-experience-run").nextElementSibling.hidden = ["P02", "P03", "P04"].includes(activeProblem);
   configureNativeInputs(activeProblem);
   const feature = experienceFunctions[activeProblem];
-  setText("h23-experience-tab", activeProblem === "P23" ? "모델 직접 테스트" : "기능 직접 테스트");
+  setText("h23-experience-tab", "직접 테스트");
   setText("mission-experience-intro", feature ? feature[1] : "현재 함수로 질문을 보내 모델 답변을 확인합니다.");
   setText("mission-experience-run", nativeActions[activeProblem] || "현재 기능 실행");
+  byId("h23-build-tab").setAttribute("aria-selected", String(build));
   byId("h23-experience-tab").setAttribute("aria-selected", String(experience));
-  byId("h23-grade-tab").setAttribute("aria-selected", String(!experience));
+  byId("h23-grade-tab").setAttribute("aria-selected", String(!experience && !build));
+  byId("h23-build-tab").tabIndex = build ? 0 : -1;
   byId("h23-experience-tab").tabIndex = experience ? 0 : -1;
-  byId("h23-grade-tab").tabIndex = experience ? -1 : 0;
+  byId("h23-grade-tab").tabIndex = experience || build ? -1 : 0;
   const actions = byId("mission-execution-actions").querySelector(`[data-problem="${activeProblem}"]`);
-  if (actions) actions.hidden = experience;
-  if (experience) {
+  if (actions) actions.hidden = experience || build;
+  if (experience || build) {
     for (const {node} of p01ResultHomes) node.hidden = true;
+    byId("failure-help").hidden = true;
+    byId("grading-checked-at").hidden = true;
     byId("case-results").hidden = true;
     byId("case-progress").hidden = true;
     byId("resource-operation").hidden = true;
@@ -2436,6 +2630,7 @@ function selectModelCallPane(name, restore = true) {
 }
 byId("h23-experience-tab").addEventListener("click", () => selectModelCallPane("experience"));
 byId("h23-grade-tab").addEventListener("click", () => selectModelCallPane("grade"));
+byId("h23-build-tab").addEventListener("click", () => selectModelCallPane("build"));
 byId("h23-chat-form").addEventListener("submit", async event => {
   event.preventDefault();
   if (executionPending) return;

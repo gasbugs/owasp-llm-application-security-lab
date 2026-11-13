@@ -137,7 +137,7 @@ H06_SCAFFOLD_DIGEST = "4ce5a36f1107742bfb8925f82e1cef0ec59038a40b1cf9ec6c50c1aea
 H07_SCAFFOLD_DIGEST = "2da595a0517a8c41703c135466a30bf81e924bb513420e8c9c359c00d8bbfa87"
 H08_SCAFFOLD_DIGEST = "314f28bea8af0aeac68785afa07f99caf3216c6ad830b8d6b26e01eb389e7f54"
 H09_SCAFFOLD_DIGEST = "0059b03306a1aea17097c4a82e304dc7d87d7b35f7f9e1745d41673e9ed541c3"
-H10_SCAFFOLD_DIGEST = "c3d171327dd09028fa98e6409e5a594ac2118152c25969360a02068979cef0cb"
+H10_SCAFFOLD_DIGEST = "77d0c20edc73b673b174093a556240f020c51ee0494c5de72006e1beaf5d7304"
 H11_SCAFFOLD_DIGEST = "760f73d58b6a58217dcd4d9cde35734a59f56003333b882719b306485ff3a569"
 H13_SCAFFOLD_DIGEST = "6c091ab6a82d5e2c3e30457b5628e9595a259eea8094fefcaea4aab8c0809717"
 H22_HOST_URL = os.getenv("GUIDED_H22_HOST_URL", "http://guided-h22-host:8000")
@@ -1233,12 +1233,15 @@ async def check_h22(request,through_case=None) -> dict:
         counts=[0 for name in prefix if name in {'no-approval','changed-args','expired'}]+[1 for name in prefix if name in {'approved','reuse'}]
         actual=receipt.get('effect_counts')
         expected_effects=1 if 'approved' in prefix else 0
-        safe=all((receipt.get(keys[name],{}).get('denied') is True if name=='self-approval'
+        safe=all(((receipt.get(keys[name],{}).get('denied') is True
+                and receipt.get(keys[name],{}).get('server_is_error') is True
+                and receipt.get(keys[name],{}).get('effect_count') == 0) if name=='self-approval'
             else receipt.get(keys[name],{}).get('is_error') is (name not in {'normal','approved'})) for name in prefix)
         if (not fields_match or receipt.get('case_order')!=prefix or not prefix or not isinstance(actual,list)
                 or len(actual)!=len(counts) or any(type(x) is not int for x in actual)):
             verdict='ERR';reason='현재 MCP 승인 사례의 순서·정책·원장 증거가 일치하지 않습니다.'
-        elif any(x>y for x,y in zip(actual,counts)) or effects.get('effects',0)>expected_effects:
+        elif (any(x>y for x,y in zip(actual,counts)) or effects.get('effects',0)>expected_effects
+              or ('self-approval' in prefix and receipt.get('self_approval',{}).get('effect_count',0)>0)):
             verdict='HIT';reason='승인되지 않은 MCP 실행이 실제 공지 원장에 기록됐습니다.'
         elif (not safe or actual!=counts or effects.get('effects')!=expected_effects
                 or (expected_effects and (len(effect_calls)!=1
@@ -1251,7 +1254,8 @@ async def check_h22(request,through_case=None) -> dict:
             verdict = "ERR"
             reason = "Host 영수증과 MCP Server의 protocol·Tool·source·부작용 증거가 일치하지 않습니다."
         elif (
-            isinstance(receipt.get("effect_counts"), list)
+            receipt.get("self_approval", {}).get("effect_count", 0) > 0
+            or isinstance(receipt.get("effect_counts"), list)
             and len(receipt["effect_counts"]) == 5
             and (
                 receipt["effect_counts"][0] > 0
@@ -1267,6 +1271,8 @@ async def check_h22(request,through_case=None) -> dict:
                 (
                     receipt.get("normal", {}).get("is_error") is False,
                     receipt.get("self_approval", {}).get("denied") is True,
+                    receipt.get("self_approval", {}).get("server_is_error") is True,
+                    receipt.get("self_approval", {}).get("effect_count") == 0,
                     receipt.get("changed_args", {}).get("is_error") is True,
                     receipt.get("expired", {}).get("is_error") is True,
                     receipt.get("approved", {}).get("is_error") is False,
@@ -3807,7 +3813,7 @@ def check_h10_evidence(request:H10VerifyRequest,case_only:bool=False)->dict:
         main_text = calls_by_key[(case_id, "main")].get("output_text", "")
         browser_marker = case.get("browser_marker_observed")
         expected_marker = markers.get(case_id)
-        if expected_marker and main_text.strip() != expected_marker:
+        if expected_marker and expected_marker not in main_text:
             return err(f"{case_id} Main Model의 합성 영향 marker가 재현되지 않았습니다.")
         if expected_marker and browser_marker not in {True, False}:
             return err(f"{case_id} Browser 공개 여부가 없습니다.")
@@ -4361,8 +4367,8 @@ def verify_h15(request: H13VerifyRequest, _authorized: None = Depends(require_co
 class H16CaseRequest(H13VerifyRequest):
     case_id: str
 
-H16_IDS=['normal-business','normal-explanation','risk-marker','risk-paraphrase']
-H16_EXPECTED=['allow','allow','block','block']
+H16_IDS=['normal-business','normal-explanation','risk-marker','risk-paraphrase','normal-quoted','risk-marker-variant']
+H16_EXPECTED=['allow','allow','block','block','allow','block']
 
 def check_h16_sequence(request,final=False):
     result={}
@@ -4375,7 +4381,7 @@ def check_h16_sequence(request,final=False):
         if (start.tzinfo is None or not 0<=(datetime.now(timezone.utc)-start).total_seconds()<=900
                 or record['suite_id']!=request.suite_id or record['started_at']!=request.started_at
                 or record['sandbox_digest']!=raw['current_source']):raise ValueError('source or execution identity changed')
-        count=4 if final else H16_IDS.index(request.case_id)+1
+        count=len(H16_IDS) if final else H16_IDS.index(request.case_id)+1
         if len(cases)!=count or [x.get('case_id') for x in cases]!=H16_IDS[:count]:raise ValueError('case prefix incomplete')
         for index,row in enumerate(cases):
             decision=row.get('decision');expected=H16_EXPECTED[index]
@@ -4418,11 +4424,11 @@ def verify_h16(request: H13VerifyRequest, _authorized: None = Depends(require_co
     data=response.json(); events=data.get('events',[]); cases=data.get('cases',[]); result={"baseline_digest":data.get('baseline_digest'),"sandbox_digest":data.get('sandbox_digest'),"active_digest":data.get('active_digest'),"baseline_risk_hit":data.get('baseline_risk_hit'),"cases":cases,"regression_passed":data.get('regression_passed'),"events":events}
     if data.get('started_at') != request.started_at: return tool_err("H16",request,"현재 suite의 승격 증거가 아닙니다.",result)
     if not data.get('sandbox_digest'): return tool_err("H16",request,"현재 실행한 정책의 digest가 없습니다.",result)
-    expected_ids=['normal-business','normal-explanation','risk-marker','risk-paraphrase']
+    expected_ids=H16_IDS
     decisions=[item.get('decision') for item in cases]
     if [item.get('case_id') for item in cases] != expected_ids:
-        return tool_err("H16",request,"서버 고정 회귀 사례 네 개가 완전하지 않습니다.",result)
-    if decisions == ['allow','allow','allow','allow'] and events == []:
+        return tool_err("H16",request,"서버 고정 회귀 사례 여섯 개가 완전하지 않습니다.",result)
+    if decisions == ['allow','allow','allow','allow','allow','allow'] and events == []:
         if not (data.get('baseline_risk_hit') is True and data.get('regression_passed') is False):
             return tool_err("H16",request,"Starter의 기본 허용 영향과 승격 없음 증거가 일치하지 않습니다.",result)
         return {
@@ -4436,8 +4442,8 @@ def verify_h16(request: H13VerifyRequest, _authorized: None = Depends(require_co
             "reason":"Starter의 기본 허용 정책이 정상 요청뿐 아니라 H16 위험 요청도 허용했습니다. 승격 event는 없지만 Sandbox에서 위험 영향이 직접 확인됐습니다.",
             "next_check":"policy.py에서 H16-OVERRIDE를 명시적으로 차단한 뒤 같은 정상·위험 suite를 다시 실행합니다.",
         }
-    if not (decisions==['allow','allow','block','block'] and data.get('regression_passed') is True and [x.get('event') for x in events]==['promote','rollback','promote'] and data.get('active_digest')==data.get('sandbox_digest')): return tool_err("H16",request,"정상 2개·공격 2개 회귀, CAS 승격, rollback 원장이 완전하지 않습니다.",result)
-    return {**tool_err("H16",request,"",result),"course_verdict":"PASS","stage_calls":[{"stage":"sandbox_regression","attempted":True,"outcome":"four-cases-pass","evidence_id":data['sandbox_digest']},{"stage":"promotion_ledger","attempted":True,"outcome":"promote-rollback-promote","evidence_id":events[-1]['at']}],"evidence":[{"source":"h16-policy-store","kind":"audit-ledger","id":request.suite_id}],"reason":"정상 업무·공격 문자열 설명은 허용하고 원문·변형 공격은 차단한 digest만 active가 되었으며 rollback과 재승격 audit event까지 확인했습니다."}
+    if not (decisions==H16_EXPECTED and data.get('regression_passed') is True and [x.get('event') for x in events]==['promote','rollback','promote'] and data.get('active_digest')==data.get('sandbox_digest')): return tool_err("H16",request,"정상 3개·공격 3개 회귀, CAS 승격, rollback 원장이 완전하지 않습니다.",result)
+    return {**tool_err("H16",request,"",result),"course_verdict":"PASS","stage_calls":[{"stage":"sandbox_regression","attempted":True,"outcome":"six-cases-pass","evidence_id":data['sandbox_digest']},{"stage":"promotion_ledger","attempted":True,"outcome":"promote-rollback-promote","evidence_id":events[-1]['at']}],"evidence":[{"source":"h16-policy-store","kind":"audit-ledger","id":request.suite_id}],"reason":"정상 업무·공격 문자열 설명은 허용하고 원문·변형 공격은 차단한 digest만 active가 되었으며 rollback과 재승격 audit event까지 확인했습니다."}
 
 
 class H18CaseRequest(H13VerifyRequest):
@@ -4595,7 +4601,7 @@ def verify_h17_sequence(request:H17SequenceRequest,_authorized:None=Depends(requ
         if len(request.children)!=3 or len({c.suite_id for c in request.children})!=3:raise ValueError()
         for index,child in enumerate(request.children):
             if datetime.fromisoformat(child.started_at)<start:raise ValueError()
-            checked=check_p17_signals(child,index)
+            checked=check_p17_signals(child,index,historical=True)
             if checked['course_verdict']!='PASS' or not checked.get('case_verified'):raise ValueError()
             current=checked['result']['source_digest']
             if source is not None and source!=current:raise ValueError()
@@ -4625,8 +4631,14 @@ def verify_p17_signals(request: H13VerifyRequest) -> dict:
     return check_p17_signals(request)
 
 
-def check_p17_signals(request,selected_case=None) -> dict:
-    result = {}
+def check_p17_signals(request,selected_case=None,historical=False) -> dict:
+    result = {'collection_stage': 'execution'}
+    checks = {
+        'execution': 'P17 실행 기록·적용 코드와 처리 원장을 확인합니다.',
+        'prometheus_baseline': 'Prometheus의 실행 전 Counter 표본과 P17 서비스 상태를 확인합니다.',
+        'prometheus_scrape': 'Prometheus의 guided-h17-telemetry 수집 대상과 최근 scrape 시각을 확인합니다.',
+        'loki_tempo': '같은 요청 ID의 Loki Log와 Tempo Trace가 수집됐는지 확인합니다.',
+    }
     def outcome(reason, completed=False):
         verdict = 'PASS' if completed else 'ERR'
         return {**tool_err('H17', request, reason, result), 'activity_id': 'P17',
@@ -4638,7 +4650,7 @@ def check_p17_signals(request,selected_case=None) -> dict:
                 'evidence': [{'source': 'tempo', 'kind': 'trace', 'id': c['trace_id']}
                              for c in result.get('cases', [])],
                 'next_check': ('정상·거부 요청의 단계와 Counter 증가를 제품 원문과 비교합니다.' if completed
-                               else '현재 계측 함수의 실행 상태와 실패한 요구사항을 확인합니다.')}
+                               else checks.get(result.get('collection_stage'), checks['execution']))}
     try:
         with httpx.Client(timeout=20, trust_env=False) as client:
             def fetch(path):
@@ -4653,13 +4665,16 @@ def check_p17_signals(request,selected_case=None) -> dict:
             build = fetch('/v1/h17/build-info')
             P17_VERIFICATION.collect_and_verify(receipt, ledger, build, P17_RUNNER_DIGESTS,
                 client=client, loki_url=LOKI_URL, tempo_url=TEMPO_URL,
-                prometheus_url=PROMETHEUS_URL, result=result,selected_case=selected_case)
+                prometheus_url=PROMETHEUS_URL, result=result,selected_case=selected_case,
+                historical=historical)
             return outcome('작성한 계측 코드의 Log·Trace·Counter가 실제 정상·거부 요청과 일치합니다. 업무 저장소는 합성 fixture입니다.', True)
     except P17_VERIFICATION.RESULTS.EvidenceMismatch as exc:
         result['failed_requirement'] = str(exc)
-        return outcome('현재 실행의 계측 결과가 과제 조건과 일치하지 않습니다.')
-    except (httpx.HTTPError, TimeoutError, ValueError, KeyError, TypeError, AttributeError, IndexError):
-        return outcome('현재 실행의 처리 원장이나 제품 원문을 확인하지 못했습니다.')
+        return outcome('현재 실행의 ' + result.get('collection_stage', 'execution') + ' 단계 증거가 일치하지 않습니다.')
+    except TimeoutError:
+        return outcome('Prometheus·Loki·Tempo의 현재 실행 신호가 제한 시간 안에 수집되지 않았습니다.')
+    except (httpx.HTTPError, ValueError, KeyError, TypeError, AttributeError, IndexError):
+        return outcome('현재 실행의 ' + result.get('collection_stage', 'execution') + ' 단계 원문을 확인하지 못했습니다.')
 
 
 @app.post('/v1/verify/h20-preflight')
@@ -4779,14 +4794,14 @@ def verify_p02(request: P02VerifyRequest, _authorized: None = Depends(require_co
         with httpx.Client(follow_redirects=False, trust_env=False) as client:
             result = verification.collect(suite, client, on_progress=update_progress)
         completed = result.get("case_contract_verified") is True
-    except (httpx.HTTPError, ValueError, KeyError, TypeError, AttributeError, IndexError, OSError):
+    except (httpx.HTTPError, ValueError, KeyError, TypeError, AttributeError, IndexError, OSError) as exc:
         observed = [dict(case) for case in P02_PROGRESS[suite].get("cases", [])]
         failed_count = len(observed)
         if not observed and expected_cases:
             observed = [{"case_id": expected_cases[0], "status": "ERR", "case_verified": False,
-                         "reason": "Starter 구현에서 첫 검증 사례를 완료하지 못했습니다."}]
+                         "reason": "첫 사례의 실행 증거를 확인하지 못했습니다. 앱·Gateway 준비 상태와 요청 기록을 확인하세요."}]
             failed_count = 1
-        observed.extend({"case_id": case_id, "status": "미실행", "reason": "앞 케이스 실패로 중단"}
+        observed.extend({"case_id": case_id, "status": "미검증", "reason": "앞 사례의 증거 불일치로 검증을 중단했습니다."}
                         for case_id in expected_cases[failed_count:])
         result = {"case_contract_verified": False, "cases": observed}
     finally:
@@ -4797,6 +4812,9 @@ def verify_p02(request: P02VerifyRequest, _authorized: None = Depends(require_co
         progress.update(phase="finished", current_case=None)
         P02_LOCK.release()
     verdict = "PASS" if completed else "ERR"
+    first_failure = next((case for case in result["cases"] if case.get("case_verified") is False), None)
+    failure_reason = (f'{first_failure["case_id"]}: {first_failure["reason"]}'
+                      if first_failure and first_failure.get("reason") else "실행 기록을 검증하지 못했습니다. 앱과 Gateway 상태를 확인하세요.")
     return {"lab_id": "02-embedding-kb", "activity_id": "P02", "execution_id": suite,
             "execution_kind": "p02-document-suite", "contract_version": "p02-document-v1", "status": "completed",
             "task_completed": completed, "security_verdict": verdict, "course_verdict": verdict,
@@ -4808,8 +4826,9 @@ def verify_p02(request: P02VerifyRequest, _authorized: None = Depends(require_co
                        "embedding_dimension": 1024 if completed else None,
                        "source_digest": result.get("build", {}).get("source_digest")},
             "reason": ("정상 문서 4건의 저장·변환과 잘못된 입력 18건의 호출 전 거부를 확인했습니다."
-                       if completed else "현재 실행의 필수 기록을 확인하지 못해 과제는 미완료입니다."),
-            "next_check": "사례별 실행 코드와 Gateway의 저장·변환 기록을 확인하세요."}
+                       if completed else failure_reason),
+            "next_check": ("사례별 HTTP 상태와 저장·변환 기록을 확인하세요." if completed else
+                           "실패한 사례의 원인을 먼저 고친 뒤 다시 제출하세요. 이후 사례는 실행 여부와 별개로 아직 검증하지 않았습니다.")}
 
 
 class P03VerifyRequest(BaseModel):

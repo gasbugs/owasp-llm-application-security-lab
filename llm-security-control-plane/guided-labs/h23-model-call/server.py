@@ -2,6 +2,7 @@
 import hashlib
 import hmac
 import json
+import importlib
 import os
 import sqlite3
 import threading
@@ -37,6 +38,49 @@ def verifier(authorization: str | None = Header(None)):
 class Run(BaseModel):
     model_config = ConfigDict(extra="forbid")
     execution_id: UUID
+
+class BlockSubmission(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    order: list[str] = Field(min_length=1, max_length=6)
+
+BLOCK_CODE = {
+    "model_id": 'model_id = "us.amazon.nova-lite-v1:0"',
+    "output_tokens": "max_tokens = 64",
+    "client": 'client = boto3.client("bedrock-runtime", region_name=region_name, config=config)',
+    "converse": 'response = client.converse(\n    modelId=model_id,\n    messages=[{"role": "user", "content": [{"text": message}]}],\n    inferenceConfig={"maxTokens": max_tokens, "temperature": 0},\n)',
+    "budget_limit": "limit = 128",
+    "guardrail_trace": 'guardrail_trace = "enabled"',
+}
+
+@app.post("/v1/submit-blocks")
+def submit_blocks(body: BlockSubmission, _=Depends(control)):
+    if len(set(body.order)) != len(body.order) or any(block not in BLOCK_CODE for block in body.order):
+        raise HTTPException(422, "invalid block selection")
+    if not SDK_LOCK.acquire(blocking=False):
+        raise HTTPException(409, "모델 요청이 진행 중입니다.")
+    try:
+        starter = (ROOT / "learner-starter.py").read_text()
+        before, marker, remainder = starter.partition("    try:\n")
+        _, ending, after = remainder.partition("    except (BotoCoreError, ClientError) as exc:")
+        if not marker or not ending:
+            raise HTTPException(500, "starter layout mismatch")
+        lines = "\n\n".join("\n".join("        " + line for line in BLOCK_CODE[block].splitlines()) for block in body.order)
+        source = before + marker + lines + "\n" + ending + after
+        compile(source, str(ROOT / "learner.py"), "exec")
+        target = ROOT / "learner.py"
+        previous = target.read_text()
+        try:
+            target.write_text(source)
+            importlib.invalidate_caches()
+            importlib.reload(learner)
+        except Exception:
+            target.write_text(previous)
+            importlib.invalidate_caches()
+            importlib.reload(learner)
+            raise
+        return {"applied": True, "source_digest": identity()["source_digest"]}
+    finally:
+        SDK_LOCK.release()
 
 def identity():
     return {"source_digest": hashlib.sha256((ROOT/"learner.py").read_bytes()).hexdigest(),
@@ -116,6 +160,8 @@ def sdk_session():
 
 @app.post("/v1/run-suite")
 def run(body: Run, _=Depends(control), _sdk=Depends(sdk_session)):
+    importlib.invalidate_caches()
+    importlib.reload(learner)
     execution = str(body.execution_id)
     with sqlite3.connect("/tmp/model-call.sqlite3") as db:
         db.execute("CREATE TABLE IF NOT EXISTS runs (id TEXT PRIMARY KEY, payload TEXT NOT NULL)")
@@ -174,6 +220,8 @@ class Chat(BaseModel):
 
 @app.post("/v1/chat")
 def chat(body: Chat, _=Depends(control), _sdk=Depends(sdk_session)):
+    importlib.invalidate_caches()
+    importlib.reload(learner)
     client=SDKRecorder(preview_tokens=2048)
     try:
         with client.observe():

@@ -84,6 +84,8 @@ def verify_case(expected, execution, ledger, source_evidence, *, source_digest, 
             call_start, call_end = stamp(call["started_at"]), stamp(call["finished_at"])
             require(previous_end <= call_start <= call_end <= end)
             previous_end = call_end
+            if operation == "embed" and call["request_digest"] != json_digest(payload):
+                raise EvidenceError("저장한 원문과 Titan 임베딩에 보낸 본문이 다릅니다. 본문을 자르는 블록을 제거하고 원문 text를 그대로 전달하세요.")
             require(call["request_digest"] == json_digest(payload))
             require(local["operation"] == operation and local["state"] == "complete"
                     and type(local["http_status"]) is int and local["http_status"] == 200
@@ -121,5 +123,7 @@ def verify_case(expected, execution, ledger, source_evidence, *, source_digest, 
                     and sha(json.dumps(vector, separators=(",", ":"), allow_nan=False).encode()) == embedding["vector_digest"])
         return {"execution_id": expected["execution_id"], "case_verified": True, "calls": 2,
                 "provider_request_ids": identities, "source_read_request_id": read_id}
+    except EvidenceError:
+        raise
     except (KeyError, TypeError, ValueError, AttributeError, OverflowError):
         raise EvidenceError("P02 evidence does not meet the current case contract") from None

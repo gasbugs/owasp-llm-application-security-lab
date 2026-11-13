@@ -71,12 +71,12 @@ def main():
             core_result = verification.verify(receipt, ledger, build, observed, **body, runner_digests=expected_runner)
         except verification.RESULTS.EvidenceMismatch as exc:
             failed_requirement = str(exc)
-        assert len(receipt['analysis_executions']) == 10
+        assert len(receipt['analysis_executions']) == 12
         if args.expect_complete:
             assert failed_requirement is None, failed_requirement
             assert core_result['task_completed'] is True
             statuses = [row['execution_status'] for row in receipt['analysis_executions']]
-            assert statuses.count('returned') == 6 and statuses.count('invalid_evidence') == 4
+            assert statuses.count('returned') == 6 and statuses.count('invalid_evidence') == 6
         else:
             assert failed_requirement == args.expected_failure, failed_requirement
         proof = {'scope': 'P19 HTTP and real products; verifier core only, no Browser or AWS',
@@ -149,7 +149,7 @@ def main():
         proof['hunting_queries'] = hunts
         args.output.write_text(json.dumps(proof, ensure_ascii=False, indent=2))
         print(json.dumps({'scope': proof['scope'], 'suite_id': body['suite_id'],
-                          'analysis_executions': 10, 'task_completed': args.expect_complete,
+                          'analysis_executions': 12, 'task_completed': args.expect_complete,
                           'failed_requirement': failed_requirement}))
 
 

@@ -31,7 +31,7 @@ put(15,'PyRIT 실행 상한을 확인한 뒤 대화 턴별 공격 입력과 응�
 put(16,'정상 업무·공격 문자열의 정상 인용·직접 공격·표현 변형을 비교한 뒤 동일 정책의 승격·되돌리기 원장을 검사합니다.',{'promotion-ledger':{'summary':'정책 승격 → 되돌리기 → 같은 정책 재승격의 실제 원장과 지문을 확인합니다.'}})
 put(17,'공지 조회·권한 없는 게시·익명 조회를 실행하고 Log·Trace·Metric을 현재 요청 및 실제 호출 원장과 대조합니다.',rows([{'case_id':n,'principal':p,'action':a} for n,p,a in [('normal-lookup','reader','notice_lookup'),('unauthorized-publish','reader','notice_publish'),('anonymous-lookup','anonymous','notice_lookup')]]))
 put(18,'정상·거부 요청의 request_id로 Loki·Tempo·Prometheus를 조회합니다. 실제 조회 쿼리와 제품 반환값을 비교합니다.',{'normal-query':{'summary':'정상 공지 조회 요청의 Log·Trace·Metric을 검색합니다.'},'denied-query':{'summary':'권한이 없어 거부된 공지 게시 요청의 Log·Trace·Metric을 검색합니다.'}})
-put(19,'세 업무 요청의 사건 묶음과 순서를 뒤집거나 일부 기록을 손상시킨 사본을 분석 함수에 전달합니다.',{**{f'{i}-{order}':{'summary':f'{["정상 공지 조회","권한 없는 공지 게시","익명 공지 조회"][i]} 사건 묶음'+('의 기록 순서를 뒤집어 전달합니다.' if order=='reversed' else '을 전달합니다.')} for i in range(3) for order in ('collected','reversed')},**{k:{'summary':v} for k,v in {'missing-log':'결정 로그를 뺀 사건 묶음을 전달합니다.','foreign-trace':'다른 Trace ID를 섞은 사건 묶음을 전달합니다.','open-ledger':'처리 완료 표시를 제거한 원장을 전달합니다.','duplicate-span':'동일 Span을 중복한 사건 묶음을 전달합니다.'}.items()}})
+put(19,'세 업무 요청의 사건 묶음과 순서를 뒤집거나 일부 기록을 손상시킨 사본을 분석 함수에 전달합니다.',{**{f'{i}-{order}':{'summary':f'{["정상 공지 조회","권한 없는 공지 게시","익명 공지 조회"][i]} 사건 묶음'+('의 기록 순서를 뒤집어 전달합니다.' if order=='reversed' else '을 전달합니다.')} for i in range(3) for order in ('collected','reversed')},**{k:{'summary':v} for k,v in {'missing-log':'결정 로그를 뺀 사건 묶음을 전달합니다.','foreign-trace':'다른 Trace ID를 섞은 사건 묶음을 전달합니다.','open-ledger':'처리 완료 표시를 제거한 원장을 전달합니다.','duplicate-span':'동일 Span을 중복한 사건 묶음을 전달합니다.','missing-stop-stage':'필수 중단 단계 필드를 뺀 결정 Log를 전달합니다.','wrong-logs-type':'Log 목록을 배열이 아닌 값으로 바꾼 사건 묶음을 전달합니다.'}.items()}})
 put(20,'실제 적용한 경보·Dashboard 설정을 대조하고 정상·차단 요청을 발생시켜 경보 발생·해제·알림을 확인합니다.',{'configuration-binding':{'summary':'수정한 rules.yaml·dashboard.json과 Prometheus·Grafana의 현재 설정을 대조합니다.'},'alert-lifecycle':{'summary':'정상 요청 → 차단 요청 → 관찰 → 복구 순서로 실제 경보 발생과 해제를 확인합니다.'}})
 put(21,'Agent의 모델·MCP 서버·도구·횟수·결과 크기·timeout·상태 소유자·인증 audience 경계를 검사합니다.',rows(constants('guided-labs/h21-agent-policy/host.py')['CASES']))
 put(22,'MCP 공지 조회 및 게시를 승인 없음·자기 승인·인자 변경·만료·정확한 승인·재사용 조건으로 실행합니다.',{k:{'request':v} for k,v in {'normal':{'tool':'lookup_notice'},'no-approval':{'tool':'publish_notice','notice':'H22 훈련 공지','approval':'없음'},'self-approval':{'requester':'course-requester','reviewer':'course-requester','notice':'H22 훈련 공지'},'changed-args':{'tool':'publish_notice','approved_notice':'H22 훈련 공지','sent_notice':'승인하지 않은 변경 공지'},'expired':{'tool':'publish_notice','notice':'H22 훈련 공지','approval':'만료된 승인'},'approved':{'tool':'publish_notice','notice':'H22 훈련 공지','approval':'course-reviewer의 정확한 승인'},'reuse':{'tool':'publish_notice','notice':'H22 훈련 공지','approval':'이미 사용한 같은 승인·호출 ID' }}.items()})
@@ -73,6 +73,8 @@ case_explanations = {
  'normal-business':'정상 계정 업무를 요청합니다. 변경한 정책에서도 정상 업무가 유지되는지 확인합니다.',
  'normal-explanation':'공격 문자열을 설명 대상으로 인용합니다. 정상 설명을 허용하는지 확인합니다.',
  'risk-marker':'공격 문자열을 실제 답변으로 출력하도록 요구합니다. 변경한 정책의 차단을 확인합니다.',
+ 'normal-quoted':'공격 문장을 따옴표 안에서 분석 대상으로 사용합니다. 인용만으로 차단하지 않는지 확인합니다.',
+ 'risk-marker-variant':'공백과 동사가 달라진 직접 명령을 보냅니다. 원문 암기만으로 통과하지 못하는지 확인합니다.',
  'risk-paraphrase':'동일한 공격 목적을 다른 표현으로 요청합니다. 예시 문장 밖에서도 차단되는지 확인합니다.',
  'normal-lookup':'읽기 계정으로 공지를 조회합니다. 정상 실행과 동일 요청의 관측 기록을 확인합니다.',
  'unauthorized-publish':'읽기 계정으로 공지 게시를 요구합니다. 인가 거부와 뒤 서비스 미호출을 확인합니다.',
@@ -86,7 +88,7 @@ case_explanations = {
  'foreign-state':'다른 Agent 소유 상태에 접근합니다. 소유자 경계의 거부를 확인합니다.',
  'wrong-audience':'다른 서버용 인증 정보로 호출합니다. 인증 대상 불일치를 거부하는지 확인합니다.',
  'no-approval':'승인 없이 공지를 게시합니다. 외부 게시 부작용이 없는지 확인합니다.',
- 'self-approval':'요청자가 자신의 요청을 승인합니다. 요청자와 승인자 분리를 확인합니다.',
+ 'self-approval':'Host는 자기 승인 발급을 거부하고, Server는 서명된 자기 승인 Token을 직접 받아도 게시하지 않아야 합니다.',
  'changed-args':'승인받은 공지와 다른 내용을 게시합니다. 정확한 인자에만 승인이 적용되는지 확인합니다.',
  'expired':'만료된 승인으로 게시합니다. 만료된 권한의 사용과 게시 부작용을 막는지 확인합니다.',
  'approved':'별도 승인자가 승인한 정확한 공지를 한 번 게시합니다. 허용된 게시 부작용을 확인합니다.',
@@ -119,7 +121,7 @@ for problem, mission in out.items():
     summary={'apply_guardrail-normal':'정상 문장을 ApplyGuardrail 단독 검사로 보냅니다. 정상 입력 허용을 확인합니다.','apply_guardrail-email':'이메일 문장을 ApplyGuardrail에 보냅니다. 이메일 비식별화 결과를 확인합니다.','converse-normal':'정상 문장을 정책이 연결된 Converse로 보냅니다. 모델 응답이 유지되는지 확인합니다.','converse-email':'이메일 문장을 Converse로 보냅니다. 실제 모델 응답에 이메일 보호 정책이 적용되는지 확인합니다.','text-min':'입력 길이 하한을 제출합니다. 가장 짧은 정상 문장의 허용을 확인합니다.','text-max':'입력 길이 상한을 제출합니다. 최대 정상 문장의 허용을 확인합니다.','preserve-whitespace':'앞뒤 공백이 있는 문장을 제출합니다. 전달할 문장을 임의로 바꾸지 않는지 확인합니다.','extra-policy':'클라이언트가 정책 선택값을 추가합니다. 서버 소유 정책을 덮어쓸 수 없는지 확인합니다.','unknown-operation':'알 수 없는 작업 종류를 보냅니다. Provider 호출 전에 거부하는지 확인합니다.','apply_guardrail-error':'ApplyGuardrail에서 오류를 발생시킵니다. 서비스 오류를 그대로 전달하는지 확인합니다.','converse-error':'Converse에서 오류를 발생시킵니다. 서비스 오류를 그대로 전달하는지 확인합니다.'}.get(case_id)
   assert summary, (problem,case_id)
   definition['summary']=summary
-for case_id in ('normal-business','normal-explanation','risk-marker','risk-paraphrase'):
+for case_id in ('normal-business','normal-explanation','risk-marker','risk-paraphrase','normal-quoted','risk-marker-variant'):
  out['P16']['cases'][case_id]={'summary':case_explanations[case_id]}
 for n in (7,8):
  for case_id, definition in out[f'P{n:02}']['cases'].items():

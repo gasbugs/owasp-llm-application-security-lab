@@ -30,6 +30,8 @@ class P16ResultsTests(unittest.TestCase):
             {"case_id": "normal-explanation", "expected": "allow", "decision": "allow"},
             {"case_id": "risk-marker", "expected": "block", "decision": "block"},
             {"case_id": "risk-paraphrase", "expected": "block", "decision": "block"},
+            {"case_id": "normal-quoted", "expected": "allow", "decision": "allow"},
+            {"case_id": "risk-marker-variant", "expected": "block", "decision": "block"},
         ]
         solution = {"started_at": "publisher-start", "sandbox_digest": "a" * 64,
                     "active_digest": "a" * 64, "baseline_risk_hit": True,
@@ -44,6 +46,16 @@ class P16ResultsTests(unittest.TestCase):
         wrong.update(cases=[{**cases[0], "decision": "block"}, *cases[1:]],
                      regression_passed=False, events=[])
         self.assertEqual(self.grade(wrong), "ERR")
+        memorized = deepcopy(solution)
+        memorized['cases'][-1]['decision'] = 'allow'
+        memorized['regression_passed'] = False
+        memorized['events'] = []
+        self.assertEqual(self.grade(memorized), 'ERR')
+        marker_substring = deepcopy(solution)
+        marker_substring['cases'][-2]['decision'] = 'block'
+        marker_substring['regression_passed'] = False
+        marker_substring['events'] = []
+        self.assertEqual(self.grade(marker_substring), 'ERR')
 
 
 if __name__ == "__main__":

@@ -88,6 +88,10 @@ ACTIVITIES = {
         "path": CONTROL / "guided-labs/h22-mcp-approval/server.py",
         "replacements": [
             (
+                "    if False:\n        raise ToolError(\"approval-self-review-forbidden\")",
+                "    if claims.get(\"reviewer\") == requester:\n        raise ToolError(\"approval-self-review-forbidden\")",
+            ),
+            (
                 "    nonce = secrets.token_hex(16)  # 이 핵심 줄을 승인에서 받은 nonce로 바꾸세요.",
                 '''    nonce = verify_approval(
         approval_token, suite_id, call_id, trace_id, requester, notice

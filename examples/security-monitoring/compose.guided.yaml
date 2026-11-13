@@ -29,9 +29,11 @@ services:
       - 127.0.0.1:${GUIDED_NEMO_HOST_PORT:-28192}:18192
     healthcheck:
       test: [CMD, wget, -q, -O, /dev/null, http://127.0.0.1:18097/proxy-healthz]
-      interval: 2s
+      interval: 30s
+      start_interval: 15s
+      start_period: 90s
       timeout: 2s
-      retries: 30
+      retries: 3
 
   guided-control-center:
     <<: *guided-service
@@ -41,7 +43,33 @@ services:
       args: {APP_VERSION: "${GUIDED_IMAGE_VERSION:-0.1.0}"}
     image: localhost/llm-security-guided-control-center:${GUIDED_IMAGE_VERSION:-0.1.0}
     container_name: llm-security-guided-control-center
-    volumes: [guided-control-progress:/state:rw]
+    group_add: ["${LOCAL_GID:-1000}"]
+    volumes:
+      - guided-control-progress:/state:rw
+      - ${GUIDED_P01_LEARNER_FILE:-${HOME}/owasp-llm-practice/P03-01_learner.py}:/block-work/P03-01_learner.py:rw
+      - ${GUIDED_P02_LEARNER_FILE:-${HOME}/owasp-llm-practice/P01-02_learner.py}:/block-work/P01-02_learner.py:rw
+      - ${GUIDED_P03_LEARNER_FILE:-${HOME}/owasp-llm-practice/P01-03_learner.py}:/block-work/P01-03_learner.py:rw
+      - ${GUIDED_P04_LEARNER_FILE:-${HOME}/owasp-llm-practice/P02-01_learner.py}:/block-work/P02-01_learner.py:rw
+      - ${GUIDED_P05_LEARNER_FILE:-${HOME}/owasp-llm-practice/P04-01_flows.co}:/block-work/P04-01_flows.co:rw
+      - ${GUIDED_P06_LEARNER_FILE:-${HOME}/owasp-llm-practice/P04-02_actions.py}:/block-work/P04-02_actions.py:rw
+      - ${GUIDED_P07_LEARNER_FILE:-${HOME}/owasp-llm-practice/P04-03_config.yml}:/block-work/P04-03_config.yml:rw
+      - ${GUIDED_P08_LEARNER_FILE:-${HOME}/owasp-llm-practice/P04-04_prompts.yml}:/block-work/P04-04_prompts.yml:rw
+      - ${GUIDED_P09_LEARNER_FILE:-${HOME}/owasp-llm-practice/P04-05_policy.py}:/block-work/P04-05_policy.py:rw
+      - ${GUIDED_P10_LEARNER_FILE:-${HOME}/owasp-llm-practice/P04-06_prompts.yml}:/block-work/P04-06_prompts.yml:rw
+      - ${GUIDED_P11_LEARNER_FILE:-${HOME}/owasp-llm-practice/P04-07_policy.py}:/block-work/P04-07_policy.py:rw
+      - ${GUIDED_P12_LEARNER_FILE:-${HOME}/owasp-llm-practice/P04-08_pipeline.py}:/block-work/P04-08_pipeline.py:rw
+      - ${GUIDED_P13_LEARNER_FILE:-${HOME}/owasp-llm-practice/P05-01_promptfooconfig.yaml}:/block-work/P05-01_promptfooconfig.yaml:rw
+      - ${GUIDED_P14_LEARNER_FILE:-${HOME}/owasp-llm-practice/P05-02_garak-config.yaml}:/block-work/P05-02_garak-config.yaml:rw
+      - ${GUIDED_P15_LEARNER_FILE:-${HOME}/owasp-llm-practice/P05-03_attack.py}:/block-work/P05-03_attack.py:rw
+      - ${GUIDED_P16_LEARNER_FILE:-${HOME}/owasp-llm-practice/P05-04_policy.py}:/block-work/P05-04_policy.py:rw
+      - ${GUIDED_P17_LEARNER_FILE:-${HOME}/owasp-llm-practice/P06-01_instrumentation.py}:/block-work/P06-01_instrumentation.py:rw
+      - ${GUIDED_P18_LEARNER_FILE:-${HOME}/owasp-llm-practice/P06-02_queries.yaml}:/block-work/P06-02_queries.yaml:rw
+      - ${GUIDED_P19_LEARNER_FILE:-${HOME}/owasp-llm-practice/P06-03_investigation.py}:/block-work/P06-03_investigation.py:rw
+      - ${GUIDED_P20_RULES_FILE:-${HOME}/owasp-llm-practice/P06-04_rules.yaml}:/block-work/P06-04_rules.yaml:rw
+      - ${GUIDED_P20_DASHBOARD_FILE:-${HOME}/owasp-llm-practice/P06-04_dashboard.json}:/block-work/P06-04_dashboard.json:rw
+      - ${GUIDED_P21_LEARNER_FILE:-${HOME}/owasp-llm-practice/P07-01_policy.py}:/block-work/P07-01_policy.py:rw
+      - ${GUIDED_P22_LEARNER_FILE:-${HOME}/owasp-llm-practice/P07-02_server.py}:/block-work/P07-02_server.py:rw
+      - ${HOME}/owasp-llm-lab-setup-guide/.state/block-build-jobs:/block-build-jobs:rw
     environment:
       GUIDED_PROGRESS_DATABASE: /state/progress.sqlite3
       RELEASE_VERSION: ${GUIDED_IMAGE_VERSION:-0.1.0}
@@ -103,8 +131,8 @@ services:
       GUIDED_H22_HOST_URL: http://guided-h22-host:8000
       GUIDED_BEDROCK_GATEWAY_URL: http://guided-bedrock-gateway:8080
       GUIDED_VERIFIER_URL: http://guided-evidence-verifier:8000
-      GUIDED_ALLOWED_HOSTS: 127.0.0.1:${GUIDED_HOST_PORT:-28097},localhost:${GUIDED_HOST_PORT:-28097}
-      GUIDED_ALLOWED_ORIGINS: http://127.0.0.1:${GUIDED_HOST_PORT:-28097},http://localhost:${GUIDED_HOST_PORT:-28097}
+      GUIDED_ALLOWED_HOSTS: 127.0.0.1:${GUIDED_HOST_PORT:-28097},localhost:${GUIDED_HOST_PORT:-28097},book-neb4p1e6db.tail36e6cc.ts.net:28097
+      GUIDED_ALLOWED_ORIGINS: http://127.0.0.1:${GUIDED_HOST_PORT:-28097},http://localhost:${GUIDED_HOST_PORT:-28097},https://book-neb4p1e6db.tail36e6cc.ts.net:28097
       GUIDED_NEMO_BROWSER_URL: http://127.0.0.1:${GUIDED_NEMO_HOST_PORT:-28192}
       GUIDED_PROMPTFOO_BROWSER_URL: http://127.0.0.1:${GUIDED_PROMPTFOO_PORT:-25500}
       GUIDED_PYRIT_BROWSER_URL: http://127.0.0.1:${GUIDED_PYRIT_PORT:-28098}
@@ -112,9 +140,11 @@ services:
       GUIDED_P20_GRAFANA_BROWSER_URL: http://127.0.0.1:${GUIDED_P20_GRAFANA_PORT:-23002}/d/guided-p20
     healthcheck:
       test: [CMD, python, -c, "import urllib.request; r=urllib.request.Request('http://127.0.0.1:8000/readyz', headers={'Host':'127.0.0.1:${GUIDED_HOST_PORT:-28097}'}); urllib.request.urlopen(r, timeout=2)"]
-      interval: 2s
+      interval: 30s
+      start_interval: 15s
+      start_period: 90s
       timeout: 3s
-      retries: 30
+      retries: 3
 
   guided-model-call:
     <<: *guided-service
@@ -132,11 +162,14 @@ services:
       GUIDED_VERIFIER_LAB01_TOKEN: ${GUIDED_VERIFIER_LAB01_TOKEN:?Set GUIDED_VERIFIER_LAB01_TOKEN}
     volumes:
       - ${AWS_CREDENTIALS_DIR:-${HOME}/.aws}:/tmp/.aws:ro
+      - ${GUIDED_P23_LEARNER_FILE:-${HOME}/owasp-llm-practice/P01-01_learner.py}:/app/learner.py:rw
     healthcheck:
       test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/readyz', timeout=2)"]
-      interval: 2s
+      interval: 60s
+      start_interval: 15s
+      start_period: 90s
       timeout: 3s
-      retries: 30
+      retries: 3
 
   guided-h01-gateway:
     <<: *guided-service
@@ -159,9 +192,11 @@ services:
       - ${AWS_CREDENTIALS_DIR:-${HOME}/.aws}:/tmp/.aws:ro
     healthcheck:
       test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/readyz', timeout=2)"]
-      interval: 2s
+      interval: 60s
+      start_interval: 15s
+      start_period: 90s
       timeout: 3s
-      retries: 30
+      retries: 3
 
   guided-evidence-verifier:
     <<: *guided-service
@@ -244,9 +279,11 @@ services:
     volumes: [guided-verifier-state:/state:rw]
     healthcheck:
       test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/readyz', timeout=2)"]
-      interval: 2s
+      interval: 30s
+      start_interval: 15s
+      start_period: 90s
       timeout: 3s
-      retries: 30
+      retries: 3
 
   guided-bedrock-gateway:
     <<: *guided-service
@@ -295,9 +332,11 @@ services:
         aliases: [llm-security-bedrock-gateway]
     healthcheck:
       test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/readyz', timeout=2)"]
-      interval: 2s
+      interval: 30s
+      start_interval: 15s
+      start_period: 90s
       timeout: 3s
-      retries: 30
+      retries: 3
 
   guided-h02-document-app:
     <<: *guided-service
@@ -311,13 +350,17 @@ services:
       GUIDED_H02_GATEWAY_TOKEN: ${GUIDED_H02_GATEWAY_TOKEN:?Set GUIDED_H02_GATEWAY_TOKEN}
       GUIDED_CONTROL_LAB02_TOKEN: ${GUIDED_CONTROL_LAB02_TOKEN:?Set GUIDED_CONTROL_LAB02_TOKEN}
       GUIDED_VERIFIER_LAB02_TOKEN: ${GUIDED_VERIFIER_LAB02_TOKEN:?Set GUIDED_VERIFIER_LAB02_TOKEN}
+    volumes:
+      - ${GUIDED_P02_LEARNER_FILE:-${HOME}/owasp-llm-practice/P01-02_learner.py}:/app/learner.py:ro
     depends_on:
       guided-bedrock-gateway: {condition: service_healthy}
     healthcheck:
       test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/readyz', timeout=2)"]
-      interval: 2s
+      interval: 60s
+      start_interval: 15s
+      start_period: 90s
       timeout: 3s
-      retries: 30
+      retries: 3
 
   guided-h03-sync-app:
     <<: *guided-service
@@ -332,14 +375,18 @@ services:
       GUIDED_CONTROL_LAB03_TOKEN: ${GUIDED_CONTROL_LAB03_TOKEN:?Set GUIDED_CONTROL_LAB03_TOKEN}
       GUIDED_VERIFIER_LAB03_TOKEN: ${GUIDED_VERIFIER_LAB03_TOKEN:?Set GUIDED_VERIFIER_LAB03_TOKEN}
       GUIDED_H03_DATABASE: /state/p03-receipts.sqlite3
-    volumes: [guided-h03-receipts:/state:rw]
+    volumes:
+      - guided-h03-receipts:/state:rw
+      - ${GUIDED_P03_LEARNER_FILE:-${HOME}/owasp-llm-practice/P01-03_learner.py}:/app/learner.py:ro
     depends_on:
       guided-bedrock-gateway: {condition: service_healthy}
     healthcheck:
       test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/readyz', timeout=2)"]
-      interval: 2s
+      interval: 60s
+      start_interval: 15s
+      start_period: 90s
       timeout: 3s
-      retries: 30
+      retries: 3
 
   guided-h04-guardrail-app:
     <<: *guided-service
@@ -354,14 +401,18 @@ services:
       GUIDED_CONTROL_LAB04_TOKEN: ${GUIDED_CONTROL_LAB04_TOKEN:?Set GUIDED_CONTROL_LAB04_TOKEN}
       GUIDED_VERIFIER_LAB04_TOKEN: ${GUIDED_VERIFIER_LAB04_TOKEN:?Set GUIDED_VERIFIER_LAB04_TOKEN}
       GUIDED_H04_DATABASE: /state/p04-receipts.sqlite3
-    volumes: [guided-h04-receipts:/state:rw]
+    volumes:
+      - guided-h04-receipts:/state:rw
+      - ${GUIDED_P04_LEARNER_FILE:-${HOME}/owasp-llm-practice/P02-01_learner.py}:/app/learner.py:ro
     depends_on:
       guided-bedrock-gateway: {condition: service_healthy}
     healthcheck:
       test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/readyz', timeout=2)"]
-      interval: 2s
+      interval: 60s
+      start_interval: 15s
+      start_period: 90s
       timeout: 3s
-      retries: 30
+      retries: 3
 
   guided-h05-nemo-dialog:
     <<: *guided-service
@@ -377,7 +428,9 @@ services:
       GUIDED_VERIFIER_LAB05_TOKEN: ${GUIDED_VERIFIER_LAB05_TOKEN:?Set GUIDED_VERIFIER_LAB05_TOKEN}
     healthcheck:
       test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/readyz', timeout=2)"]
-      interval: 2s
+      interval: 60s
+      start_interval: 15s
+      start_period: 90s
       timeout: 3s
       retries: 45
 
@@ -396,9 +449,11 @@ services:
       GUIDED_H06_CAPABILITY_SECRET: ${GUIDED_H06_CAPABILITY_SECRET:?Set GUIDED_H06_CAPABILITY_SECRET}
     healthcheck:
       test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/readyz', timeout=2)"]
-      interval: 2s
+      interval: 60s
+      start_interval: 15s
+      start_period: 90s
       timeout: 3s
-      retries: 30
+      retries: 3
 
   guided-h06-nemo-action:
     <<: *guided-service
@@ -418,7 +473,9 @@ services:
       guided-h06-action-provider: {condition: service_healthy}
     healthcheck:
       test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/readyz', timeout=2)"]
-      interval: 2s
+      interval: 60s
+      start_interval: 15s
+      start_period: 90s
       timeout: 3s
       retries: 45
 
@@ -441,7 +498,9 @@ services:
       guided-bedrock-gateway: {condition: service_healthy}
     healthcheck:
       test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/readyz', timeout=2)"]
-      interval: 2s
+      interval: 60s
+      start_interval: 15s
+      start_period: 90s
       timeout: 3s
       retries: 45
 
@@ -464,7 +523,9 @@ services:
       guided-bedrock-gateway: {condition: service_healthy}
     healthcheck:
       test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/readyz', timeout=2)"]
-      interval: 2s
+      interval: 60s
+      start_interval: 15s
+      start_period: 90s
       timeout: 3s
       retries: 45
 
@@ -483,9 +544,11 @@ services:
     volumes: [guided-h09-sink-ledger:/state:rw]
     healthcheck:
       test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/readyz', timeout=2)"]
-      interval: 2s
+      interval: 60s
+      start_interval: 15s
+      start_period: 90s
       timeout: 3s
-      retries: 30
+      retries: 3
 
   guided-h09-presidio-redaction:
     <<: *guided-service
@@ -505,7 +568,9 @@ services:
       guided-h09-delivery-sink: {condition: service_healthy}
     healthcheck:
       test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/readyz', timeout=2)"]
-      interval: 2s
+      interval: 60s
+      start_interval: 15s
+      start_period: 90s
       timeout: 3s
       retries: 60
 
@@ -529,7 +594,9 @@ services:
       guided-bedrock-gateway: {condition: service_healthy}
     healthcheck:
       test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/readyz', timeout=2)"]
-      interval: 2s
+      interval: 60s
+      start_interval: 15s
+      start_period: 90s
       timeout: 3s
       retries: 45
 
@@ -551,7 +618,9 @@ services:
       guided-bedrock-gateway: {condition: service_healthy}
     healthcheck:
       test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/readyz', timeout=2)"]
-      interval: 2s
+      interval: 60s
+      start_interval: 15s
+      start_period: 90s
       timeout: 3s
       retries: 45
 
@@ -576,9 +645,11 @@ services:
     volumes: [guided-h12-receipts:/state:rw]
     healthcheck:
       test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/readyz', timeout=2)"]
-      interval: 2s
+      interval: 60s
+      start_interval: 15s
+      start_period: 90s
       timeout: 3s
-      retries: 30
+      retries: 3
 
   guided-h13-promptfoo-target:
     <<: *guided-service
@@ -591,9 +662,11 @@ services:
       GUIDED_H13_TARGET_TOKEN: ${GUIDED_H13_TARGET_TOKEN:?Set GUIDED_H13_TARGET_TOKEN}
     healthcheck:
       test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/readyz', timeout=2)"]
-      interval: 2s
+      interval: 60s
+      start_interval: 15s
+      start_period: 90s
       timeout: 3s
-      retries: 30
+      retries: 3
 
   guided-h13-promptfoo:
     <<: *guided-service
@@ -612,9 +685,11 @@ services:
       guided-h13-promptfoo-target: {condition: service_healthy}
     healthcheck:
       test: [CMD, node, -e, "fetch('http://127.0.0.1:8000/readyz').then(r=>{if(!r.ok)process.exit(1)})"]
-      interval: 2s
+      interval: 60s
+      start_interval: 15s
+      start_period: 90s
       timeout: 3s
-      retries: 30
+      retries: 3
 
   guided-h14-target:
     <<: *guided-service
@@ -622,7 +697,7 @@ services:
     image: localhost/llm-security-guided-h14-target:${GUIDED_IMAGE_VERSION:-0.1.0}
     container_name: llm-security-guided-h14-target
     environment: {GUIDED_H14_TARGET_TOKEN: "${GUIDED_H14_TARGET_TOKEN:?Set GUIDED_H14_TARGET_TOKEN}"}
-    healthcheck: {test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/readyz')"], interval: 2s, timeout: 3s, retries: 30}
+    healthcheck: {test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/readyz')"], interval: 60s, start_interval: 15s, start_period: 90s, timeout: 3s, retries: 3}
 
   guided-h14-garak:
     <<: *guided-service
@@ -635,7 +710,7 @@ services:
       GUIDED_H14_TARGET_TOKEN: ${GUIDED_H14_TARGET_TOKEN:?Set GUIDED_H14_TARGET_TOKEN}
     volumes: [guided-h14-artifacts:/state:rw]
     depends_on: {guided-h14-target: {condition: service_healthy}}
-    healthcheck: {test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/readyz')"], interval: 2s, timeout: 3s, retries: 30}
+    healthcheck: {test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/readyz')"], interval: 60s, start_interval: 15s, start_period: 90s, timeout: 3s, retries: 3}
 
   guided-h15-target:
     <<: *guided-service
@@ -643,7 +718,7 @@ services:
     image: localhost/llm-security-guided-h15-target:${GUIDED_IMAGE_VERSION:-0.1.0}
     container_name: llm-security-guided-h15-target
     environment: {GUIDED_H15_TARGET_TOKEN: "${GUIDED_H15_TARGET_TOKEN:?Set GUIDED_H15_TARGET_TOKEN}"}
-    healthcheck: {test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/readyz')"], interval: 2s, timeout: 3s, retries: 30}
+    healthcheck: {test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/readyz')"], interval: 60s, start_interval: 15s, start_period: 90s, timeout: 3s, retries: 3}
 
   guided-h15-pyrit:
     <<: *guided-service
@@ -657,7 +732,7 @@ services:
       GUIDED_H15_TARGET_TOKEN: ${GUIDED_H15_TARGET_TOKEN:?Set GUIDED_H15_TARGET_TOKEN}
     volumes: [guided-h15-artifacts:/state:rw]
     depends_on: {guided-h15-target: {condition: service_healthy}}
-    healthcheck: {test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/readyz')"], interval: 2s, timeout: 3s, retries: 30}
+    healthcheck: {test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/readyz')"], interval: 60s, start_interval: 15s, start_period: 90s, timeout: 3s, retries: 3}
 
   guided-h16-policy-promotion:
     <<: *guided-service
@@ -668,7 +743,7 @@ services:
       GUIDED_CONTROL_LAB16_TOKEN: ${GUIDED_CONTROL_LAB16_TOKEN:?Set GUIDED_CONTROL_LAB16_TOKEN}
       GUIDED_VERIFIER_LAB16_TOKEN: ${GUIDED_VERIFIER_LAB16_TOKEN:?Set GUIDED_VERIFIER_LAB16_TOKEN}
     volumes: [guided-h16-policy:/state:rw]
-    healthcheck: {test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/readyz')"], interval: 2s, timeout: 3s, retries: 30}
+    healthcheck: {test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/readyz')"], interval: 60s, start_interval: 15s, start_period: 90s, timeout: 3s, retries: 3}
 
   guided-h18-queries:
     <<: *guided-service
@@ -680,7 +755,7 @@ services:
       GUIDED_VERIFIER_OBSERVABILITY_TOKEN: ${GUIDED_VERIFIER_H18_TOKEN:?Set GUIDED_VERIFIER_H18_TOKEN}
       OTEL_EXPORTER_OTLP_ENDPOINT: http://alloy:4318
     volumes: [guided-h18-query-state:/state:rw]
-    healthcheck: {test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/readyz')"], interval: 2s, timeout: 3s, retries: 30}
+    healthcheck: {test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/readyz')"], interval: 60s, start_interval: 15s, start_period: 90s, timeout: 3s, retries: 3}
 
   guided-alloy:
     image: docker.io/grafana/alloy:v1.18.0
@@ -696,7 +771,7 @@ services:
     command: [-config.file=/etc/loki/config.yaml]
     volumes: [./loki-config.yaml:/etc/loki/config.yaml:ro, guided-loki-data:/loki]
     networks: {guided: {aliases: [loki]}}
-    healthcheck: {test: [CMD, /usr/bin/loki, -version], interval: 3s, timeout: 3s, retries: 40}
+    healthcheck: {test: [CMD, /usr/bin/loki, -version], interval: 60s, start_interval: 15s, start_period: 90s, timeout: 3s, retries: 3}
 
   guided-tempo:
     image: docker.io/grafana/tempo:3.0.2
@@ -704,7 +779,7 @@ services:
     command: [-target=all, -config.file=/etc/tempo/config.yaml]
     volumes: [./tempo.yaml:/etc/tempo/config.yaml:ro, guided-tempo-data:/var/tempo]
     networks: {guided: {aliases: [tempo]}}
-    healthcheck: {test: [CMD, /tempo, -version], interval: 3s, timeout: 3s, retries: 40}
+    healthcheck: {test: [CMD, /tempo, -version], interval: 60s, start_interval: 15s, start_period: 90s, timeout: 3s, retries: 3}
 
   guided-prometheus:
     image: docker.io/prom/prometheus:v3.5.0
@@ -713,7 +788,7 @@ services:
     volumes: [../../llm-security-control-plane/guided-labs/observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro, guided-prometheus-data:/prometheus]
     networks: {guided: {aliases: [prometheus]}}
     depends_on: {guided-alertmanager: {condition: service_started}}
-    healthcheck: {test: [CMD, wget, -q, -O-, http://127.0.0.1:9090/-/ready], interval: 3s, timeout: 3s, retries: 40}
+    healthcheck: {test: [CMD, wget, -q, -O-, http://127.0.0.1:9090/-/ready], interval: 60s, start_interval: 15s, start_period: 90s, timeout: 3s, retries: 3}
 
   guided-alertmanager:
     image: docker.io/prom/alertmanager:v0.28.1
@@ -746,9 +821,11 @@ services:
       GUIDED_H22_APPROVAL_SECRET: ${GUIDED_H22_APPROVAL_SECRET:?Set GUIDED_H22_APPROVAL_SECRET}
     healthcheck:
       test: [CMD, python, -c, "import socket; s=socket.create_connection(('127.0.0.1',8000),2); s.close()"]
-      interval: 2s
+      interval: 60s
+      start_interval: 15s
+      start_period: 90s
       timeout: 3s
-      retries: 30
+      retries: 3
 
   guided-h21-provider:
     <<: *guided-service
@@ -763,9 +840,11 @@ services:
       GUIDED_VERIFIER_H21_TOKEN: ${GUIDED_VERIFIER_H21_TOKEN:?Set GUIDED_VERIFIER_H21_TOKEN}
     healthcheck:
       test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/readyz', timeout=2)"]
-      interval: 2s
+      interval: 60s
+      start_interval: 15s
+      start_period: 90s
       timeout: 3s
-      retries: 30
+      retries: 3
 
   guided-h21-trusted-mcp:
     <<: *guided-service
@@ -782,9 +861,11 @@ services:
       GUIDED_VERIFIER_H21_TOKEN: ${GUIDED_VERIFIER_H21_TOKEN:?Set GUIDED_VERIFIER_H21_TOKEN}
     healthcheck:
       test: [CMD, python, -c, "import socket; s=socket.create_connection(('127.0.0.1',8000),2); s.close()"]
-      interval: 2s
+      interval: 60s
+      start_interval: 15s
+      start_period: 90s
       timeout: 3s
-      retries: 30
+      retries: 3
 
   guided-h21-untrusted-mcp:
     <<: *guided-service
@@ -801,9 +882,11 @@ services:
       GUIDED_VERIFIER_H21_TOKEN: ${GUIDED_VERIFIER_H21_TOKEN:?Set GUIDED_VERIFIER_H21_TOKEN}
     healthcheck:
       test: [CMD, python, -c, "import socket; s=socket.create_connection(('127.0.0.1',8000),2); s.close()"]
-      interval: 2s
+      interval: 60s
+      start_interval: 15s
+      start_period: 90s
       timeout: 3s
-      retries: 30
+      retries: 3
 
   guided-h21-host:
     <<: *guided-service
@@ -827,9 +910,11 @@ services:
       guided-h21-untrusted-mcp: {condition: service_healthy}
     healthcheck:
       test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/readyz', timeout=2)"]
-      interval: 2s
+      interval: 60s
+      start_interval: 15s
+      start_period: 90s
       timeout: 3s
-      retries: 30
+      retries: 3
 
   guided-h22-host:
     <<: *guided-service
@@ -851,9 +936,11 @@ services:
       guided-h22-mcp-server: {condition: service_healthy}
     healthcheck:
       test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/readyz', timeout=2)"]
-      interval: 2s
+      interval: 60s
+      start_interval: 15s
+      start_period: 90s
       timeout: 3s
-      retries: 30
+      retries: 3
 
   guided-nemo-ui:
     <<: *guided-service
@@ -868,7 +955,9 @@ services:
       guided-bedrock-gateway: {condition: service_healthy}
     healthcheck:
       test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/v1/rails/configs', timeout=2)"]
-      interval: 3s
+      interval: 60s
+      start_interval: 15s
+      start_period: 90s
       timeout: 3s
       retries: 45
 
@@ -896,7 +985,7 @@ services:
       GUIDED_CONTROL_H19_TOKEN: ${GUIDED_CONTROL_H19_TOKEN:?Set GUIDED_CONTROL_H19_TOKEN}
       GUIDED_VERIFIER_H19_TOKEN: ${GUIDED_VERIFIER_H19_TOKEN:?Set GUIDED_VERIFIER_H19_TOKEN}
     volumes: [guided-h19-investigation-state:/state:rw]
-    healthcheck: {test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/readyz')"], interval: 2s, timeout: 3s, retries: 30}
+    healthcheck: {test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/readyz')"], interval: 60s, start_interval: 15s, start_period: 90s, timeout: 3s, retries: 3}
 
   guided-h17-telemetry:
     <<: *guided-service
@@ -910,7 +999,7 @@ services:
       GUIDED_CONTROL_H17_TOKEN: ${GUIDED_CONTROL_H17_TOKEN:?Set GUIDED_CONTROL_H17_TOKEN}
       GUIDED_VERIFIER_H17_TOKEN: ${GUIDED_VERIFIER_H17_TOKEN:?Set GUIDED_VERIFIER_H17_TOKEN}
     volumes: [guided-h17-telemetry-state:/state:rw]
-    healthcheck: {test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/readyz')"], interval: 2s, timeout: 3s, retries: 30}
+    healthcheck: {test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/readyz')"], interval: 60s, start_interval: 15s, start_period: 90s, timeout: 3s, retries: 3}
 
   guided-h20-alerts:
     <<: *guided-service
@@ -928,7 +1017,7 @@ services:
       GUIDED_P20_GRAFANA_USER: p20-reader
       GUIDED_P20_GRAFANA_PASSWORD: ${GUIDED_P20_GRAFANA_PASSWORD:?Set GUIDED_P20_GRAFANA_PASSWORD}
     volumes: [guided-h20-state:/state:rw]
-    healthcheck: {test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/readyz', timeout=2)"], interval: 2s, timeout: 3s, retries: 30}
+    healthcheck: {test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/readyz', timeout=2)"], interval: 60s, start_interval: 15s, start_period: 90s, timeout: 3s, retries: 3}
 
   guided-h20-prometheus:
     <<: *guided-service
@@ -996,9 +1085,11 @@ services:
     volumes: [guided-p12-context-state:/state:rw]
     healthcheck:
       test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/readyz', timeout=2)"]
-      interval: 3s
+      interval: 60s
+      start_interval: 15s
+      start_period: 90s
       timeout: 3s
-      retries: 30
+      retries: 3
 
   guided-p12-privacy:
     <<: *guided-service
@@ -1015,9 +1106,11 @@ services:
     volumes: [guided-p12-privacy-state:/state:rw]
     healthcheck:
       test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/readyz', timeout=2)"]
-      interval: 3s
+      interval: 60s
+      start_interval: 15s
+      start_period: 90s
       timeout: 3s
-      retries: 30
+      retries: 3
 
   guided-p12-nemo:
     <<: *guided-service
@@ -1035,9 +1128,11 @@ services:
     volumes: [guided-p12-nemo-state:/state:rw]
     healthcheck:
       test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/readyz', timeout=2)"]
-      interval: 3s
+      interval: 60s
+      start_interval: 15s
+      start_period: 90s
       timeout: 3s
-      retries: 30
+      retries: 3
 
 networks:
   guided: {name: llm-security-guided}

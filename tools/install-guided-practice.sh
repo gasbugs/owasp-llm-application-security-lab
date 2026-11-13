@@ -78,6 +78,7 @@ chmod 600 "$ENV_FILE"
 log "3/5" "Practice Starter를 사용자 작업 폴더에 복제하고 실행 환경을 점검합니다."
 "$SETUP_ROOT/tools/initialize-guided-practice.sh"
 PRACTICE_OVERRIDE="$("$SETUP_ROOT/tools/prepare-guided-practice-build.sh")"
+install -d -m 2770 "$SETUP_ROOT/.state/block-build-jobs"
 python3 "$SETUP_ROOT/tools/practice_preflight.py" \
   --root "$SETUP_ROOT" --env-file "$ENV_FILE" --file "$COMPOSE_FILE"
 
@@ -104,10 +105,17 @@ if (( ${#stale_services[@]} > 0 )); then
   fail "최신 로컬 이미지를 사용하지 않는 서비스가 남았습니다: ${stale_services[*]}"
 fi
 
-# 로컬 초기화 버튼은 Docker socket을 UI에 노출하지 않고 호스트의 고정 명령만 호출합니다.
+# 블록 제출은 Docker socket을 UI에 노출하지 않고 WSL 사용자 서비스가 적용합니다.
 if command -v systemctl >/dev/null 2>&1 && systemctl --user is-system-running >/dev/null 2>&1; then
+  install -d -m 0700 "$HOME/.config/systemd/user"
+  install -m 0644 "$SETUP_ROOT/tools/systemd/guided-block-build.service" "$HOME/.config/systemd/user/guided-block-build.service"
+  install -m 0644 "$SETUP_ROOT/tools/systemd/guided-block-build.path" "$HOME/.config/systemd/user/guided-block-build.path"
+  systemctl --user daemon-reload
+  systemctl --user enable --now guided-block-build.path
   systemctl --user link "$SETUP_ROOT/tools/guided-reset-bridge.service"
   systemctl --user enable --now guided-reset-bridge.service
+else
+  fail "블록 제출 뒤 자동 빌드에는 WSL systemd 사용자 서비스가 필요합니다."
 fi
 
 printf '\n설치가 완료되었습니다.\n'

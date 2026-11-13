@@ -4,6 +4,7 @@ from pathlib import Path
 import sqlite3
 import sys
 import tempfile
+import time
 import unittest
 from unittest.mock import Mock
 
@@ -91,8 +92,24 @@ class CleanupBoundary(unittest.TestCase):
     def test_unclosed_execution_blocks_deletion(self):
         with tempfile.NamedTemporaryFile() as file:
             with sqlite3.connect(file.name) as db:
-                db.execute('CREATE TABLE p02_executions (closed_at REAL)')
-                db.execute('INSERT INTO p02_executions VALUES(NULL)')
+                db.execute('CREATE TABLE p02_executions (started_at REAL, closed_at REAL)')
+                db.execute('INSERT INTO p02_executions VALUES(?,NULL)', (time.time(),))
+            with self.assertRaises(HTTPException): module.assert_idle(file.name, 'P02')
+
+    def test_expired_unclosed_execution_is_not_active(self):
+        with tempfile.NamedTemporaryFile() as file:
+            with sqlite3.connect(file.name) as db:
+                db.execute('CREATE TABLE p02_executions (started_at REAL, closed_at REAL)')
+                db.execute('INSERT INTO p02_executions VALUES(?,NULL)', (time.time() - 3600,))
+            module.assert_idle(file.name, 'P02')
+
+    def test_pending_call_blocks_deletion_even_after_grant_expires(self):
+        with tempfile.NamedTemporaryFile() as file:
+            with sqlite3.connect(file.name) as db:
+                db.execute('CREATE TABLE p02_executions (started_at REAL, closed_at REAL)')
+                db.execute('CREATE TABLE p02_calls (state TEXT)')
+                db.execute('INSERT INTO p02_executions VALUES(?,NULL)', (time.time() - 3600,))
+                db.execute("INSERT INTO p02_calls VALUES('pending')")
             with self.assertRaises(HTTPException): module.assert_idle(file.name, 'P02')
 
     def test_active_preparation_blocks_deletion(self):
@@ -105,8 +122,8 @@ class CleanupBoundary(unittest.TestCase):
     def test_closed_execution_is_accepted(self):
         with tempfile.NamedTemporaryFile() as file:
             with sqlite3.connect(file.name) as db:
-                db.execute('CREATE TABLE p02_executions (closed_at REAL)')
-                db.execute('INSERT INTO p02_executions VALUES(1)')
+                db.execute('CREATE TABLE p02_executions (started_at REAL, closed_at REAL)')
+                db.execute('INSERT INTO p02_executions VALUES(?,1)', (time.time(),))
             module.assert_idle(file.name, 'P02')
 
 if __name__ == '__main__': unittest.main()

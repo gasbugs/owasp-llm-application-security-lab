@@ -90,10 +90,18 @@ class Verification:
             ledger = gateway("/executions/" + execution_id)
             require(started <= stamp(ledger["started_at"]) <= stamp(ledger["closed_at"]) <= finished)
             source = gateway("/executions/" + execution_id + "/source") if expected["valid"] else None
-            case_result = verify_case({**expected, "suite_id": suite_id, "execution_id": execution_id},
-                                      row["execution"], ledger, source, source_digest=build["source_digest"],
-                                      runner_digest=self.runner_digest, bucket=before["binding"]["source_bucket"],
-                                      provider_mode=before["provider_mode"], native_sdk=self.native_sdk)
+            try:
+                case_result = verify_case({**expected, "suite_id": suite_id, "execution_id": execution_id},
+                                          row["execution"], ledger, source, source_digest=build["source_digest"],
+                                          runner_digest=self.runner_digest, bucket=before["binding"]["source_bucket"],
+                                          provider_mode=before["provider_mode"], native_sdk=self.native_sdk)
+            except EvidenceError as exc:
+                results.append({"case_id": expected["case_id"], "input": expected["body"],
+                                "execution_id": execution_id, "case_verified": False,
+                                "status": "ERR", "reason": str(exc)})
+                if on_progress:
+                    on_progress(results, None)
+                raise
             current_ids = case_result.get("provider_request_ids", []) + ([case_result["source_read_request_id"]] if "source_read_request_id" in case_result else [])
             require(not provider_ids.intersection(current_ids))
             provider_ids.update(current_ids)

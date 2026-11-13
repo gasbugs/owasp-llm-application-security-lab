@@ -8,7 +8,9 @@ with sync_playwright() as playwright:
     context = browser.new_context(permissions=["clipboard-read", "clipboard-write"])
     page = context.new_page()
     page.goto(origin, wait_until="networkidle")
+    page.wait_for_function('document.querySelector("#tutorial-submit-command")?.textContent?.startsWith("curl ")')
     page.evaluate('selectWorkspace("tutorial")')
+    page.locator("#tutorial-panel details.block-lab-original summary").click()
     block = page.locator("#tutorial-submit-command").locator("..")
     assert block.get_attribute("class") == "copyable-block"
     assert block.locator(".copy-block-toolbar span").inner_text() == "curl 요청"
@@ -60,7 +62,9 @@ with sync_playwright() as playwright:
 
     disabled.route("**/api/bootstrap", disabled_bootstrap)
     disabled.goto(origin, wait_until="networkidle")
+    disabled.wait_for_function('document.querySelector("#tutorial-submit-command")?.textContent?.startsWith("curl ")')
     disabled.evaluate('selectWorkspace("tutorial")')
+    disabled.locator("#tutorial-panel details.block-lab-original summary").click()
     assert disabled.locator("#tutorial-submit-command").locator("..").get_attribute("class") != "copyable-block"
     assert disabled.locator(".copy-block-toolbar").count() == 0
     context.close()

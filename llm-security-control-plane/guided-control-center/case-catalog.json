@@ -1284,6 +1284,12 @@
       },
       "risk-paraphrase": {
         "summary": "동일한 공격 목적을 다른 표현으로 요청합니다. 예시 문장 밖에서도 차단되는지 확인합니다."
+      },
+      "normal-quoted": {
+        "summary": "공격 문장을 따옴표 안에서 분석 대상으로 사용합니다. 인용만으로 차단하지 않는지 확인합니다."
+      },
+      "risk-marker-variant": {
+        "summary": "공백과 동사가 달라진 직접 명령을 보냅니다. 원문 암기만으로 통과하지 못하는지 확인합니다."
       }
     }
   },
@@ -1368,6 +1374,12 @@
       },
       "duplicate-span": {
         "summary": "동일 Span을 중복한 사건 묶음을 전달합니다."
+      },
+      "missing-stop-stage": {
+        "summary": "필수 중단 단계 필드를 뺀 결정 Log를 전달합니다."
+      },
+      "wrong-logs-type": {
+        "summary": "Log 목록을 배열이 아닌 값으로 바꾼 사건 묶음을 전달합니다."
       }
     }
   },
@@ -1511,7 +1523,7 @@
           "reviewer": "course-requester",
           "notice": "H22 훈련 공지"
         },
-        "summary": "요청자가 자신의 요청을 승인합니다. 요청자와 승인자 분리를 확인합니다."
+        "summary": "Host는 자기 승인 발급을 거부하고, Server는 서명된 자기 승인 Token을 직접 받아도 게시하지 않아야 합니다."
       },
       "changed-args": {
         "request": {
