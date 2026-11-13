@@ -160,33 +160,20 @@ vi ~/work/control-center-tutorial/request.json</pre>
           <p class="mission-context">요청마다 답변 길이를 제한하고 Token 예산을 관리하는 Gateway를 완성합니다.</p>
         <div class="p01-statement" aria-label="문제 설명">
         <section class="mission-brief" aria-labelledby="p01-mission-title">
-          <p class="label">P01 · Gateway 만들기</p>
-          <h3 id="p01-mission-title">정상 상담은 통과! 과도한 호출은 정지!</h3>
-          <p>제공된 함수에서 빈칸을 완성하세요. 입력 검사와 오류 처리는 이미 준비되어 있습니다.</p>
-          <ol class="mission-steps">
-            <li><strong>01 · 상한과 예약</strong><span>요청한 출력 상한을 최대 128 Token으로 제한하고, 그만큼 예산을 예약하세요.</span></li>
-            <li><strong>02 · 모델 호출</strong><span>원문 질문을 Nova Lite에 한 번 보내세요. 출력 상한은 앞에서 정한 값, temperature는 0.0을 사용하세요.</span></li>
-            <li><strong>03 · 사용량 정산</strong><span>응답의 실제 출력 Token 수로 예약한 예산을 정산하세요.</span></li>
-          </ol>
-          <p class="mission-clear"><strong>완료 조건</strong> 미션 채점의 23개 테스트를 모두 통과하세요.</p>
+          <p class="label">P03-01 · Gateway</p>
+          <h3 id="p01-mission-title">호출 예산 지키기</h3>
+          <p>블록을 조립해 <code>handle_request(body, client)</code>를 완성하세요.</p>
+          <ul class="mission-steps">
+            <li>요청 상한이 128 Token을 넘으면 낮추고, 호출 전에 예산을 예약하세요.</li>
+            <li>원문 질문을 Nova Lite에 한 번 보내고, 응답의 실제 출력 Token 수로 예산을 정산하세요.</li>
+          </ul>
+          <p class="mission-clear"><strong>완료 조건</strong> 조립한 정답을 제출해 23개 테스트를 통과하세요.</p>
         </section>
 
-        <section class="hands-on" aria-labelledby="hands-on-title">
-          <div>
-            <p class="label">직접 작성할 함수</p>
-            <h3 id="hands-on-title">직접 작성할 부분</h3>
-            <p><code>~/owasp-llm-practice/P03-01_learner.py</code>의 <code>handle_request(body, client)</code>에서 다음 세 부분을 완성합니다.</p>
-            <ul>
-              <li>출력 상한 계산과 예산 예약</li>
-              <li>Nova Lite 호출</li>
-              <li>실제 사용량 정산</li>
-            </ul>
-          </div>
-        </section>
-
+        <details class="block-lab-help"><summary>터미널에서 직접 수정·적용</summary>
         <section class="hands-on" aria-labelledby="p01-apply-title">
           <div>
-            <h3>파일 수정하기</h3><p>아래 작업 파일을 수정하고 저장한 뒤 적용 명령을 실행하세요.</p><pre>vi ~/owasp-llm-practice/P03-01_learner.py</pre><h3 id="p01-apply-title">코드 적용하기</h3>
+            <h3>직접 편집할 때</h3><p>블록 대신 터미널에서 작업하려면 아래 학습자 파일을 수정하세요.</p><pre>vi ~/owasp-llm-practice/P03-01_learner.py</pre><h3 id="p01-apply-title">코드 적용하기</h3>
             <p>setup 작업 폴더에서 아래 명령을 실행합니다. 파일을 저장한 뒤, 수정한 코드로 Gateway 이미지를 다시 빌드하고 컨테이너를 재생성해 적용합니다.</p>
             <pre data-code-title="코드 적용 · 파일 복사와 재생성"># 이번 미션의 작업 파일만 빌드 폴더에 복사합니다.
 cd ~/owasp-llm-lab-setup-guide
@@ -204,6 +191,7 @@ docker compose --env-file llm-security-control-plane/.state/guided-course.env \
   up -d --no-deps --force-recreate guided-h01-gateway</pre>
           </div>
         </section>
+        </details>
 
         </div>
         <div class="p01-execution" aria-label="모델 테스트와 미션 채점">
