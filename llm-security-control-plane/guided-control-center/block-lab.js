@@ -701,7 +701,7 @@ function currentDraft(problem) {
 
 function blockCode(problem, id) {
   const block = BLOCK_LABS[problem].blocks.find(item => item.id === id);
-  const slot = BLOCK_LABS[problem].freeSlots ? (currentDraft(problem).slots[id] || BLOCK_LABS[problem].slots[0].id) : block.slot;
+  const slot = BLOCK_LABS[problem].freeSlots ? (currentDraft(problem).slots[id] || BLOCK_LABS[problem].slots[0].id) : (block.slot || BLOCK_LABS[problem].slots?.[0]?.id || "main");
   const indent = BLOCK_LABS[problem].indents?.[slot] ?? (problem === "P23" || (problem === "P04" && ["if", "else"].includes(slot)) || (problem === "P01" && ["cap", "call"].includes(slot)) ? 8 : 4);
   return block.code.split("\n").map(line => line ? " ".repeat(indent) + line : line).join("\n");
 }
