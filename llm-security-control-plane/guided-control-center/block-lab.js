@@ -1044,6 +1044,10 @@ function renderBlockLab() {
       if (!draft.order.length) { status.textContent = "블록을 하나 이상 배치한 뒤 제출하세요."; return; }
       submit.disabled = true;
       status.textContent = "조립한 코드를 적용하고 있습니다.";
+      if (problem === "P01") document.getElementById("p01-grade-tab")?.click();
+      else document.getElementById("h23-grade-tab")?.click();
+      showGradingWait(problem, new Date().toISOString());
+      showBlockSubmissionProgress(problem, "조립한 코드 적용 중");
       try {
         const url = problem === "P23" ? "/api/practice/P23/submit-blocks" : `/api/block-practice/${problem}/submit`;
         const response = await fetch(url, {
@@ -1052,9 +1056,8 @@ function renderBlockLab() {
         });
         const payload = await response.json();
         if (!response.ok || !payload.applied) throw new Error(typeof payload.detail === "string" ? payload.detail : "블록 구성을 확인하세요.");
-        if (problem === "P01") document.getElementById("p01-grade-tab")?.click();
-        else document.getElementById("h23-grade-tab")?.click();
         if (payload.build_job_id) {
+          showBlockSubmissionProgress(problem, "실행본 준비 중");
           status.textContent = `코드를 적용했습니다. ${problem === "P01" ? "Gateway" : "미션"} 실행본이 준비될 때까지 기다립니다.`;
           document.getElementById("request-status").textContent = status.textContent;
           let built = false;
@@ -1069,7 +1072,7 @@ function renderBlockLab() {
           if (!built) throw new Error("실행본 준비 시간이 초과됐습니다. 작업 상태를 확인하세요.");
         }
         status.textContent = "코드를 적용했습니다. 실제 실행 사례를 채점합니다.";
-        document.getElementById("request-status").textContent = status.textContent;
+        showBlockSubmissionProgress(problem, "미션 채점 시작 중");
         if (problem === "P01") {
           document.getElementById("p01-grade-tab")?.click();
           document.getElementById("verify")?.click();
@@ -1079,7 +1082,7 @@ function renderBlockLab() {
         }
       } catch (error) {
         status.textContent = `제출 실패: ${error.message}`;
-        if (document.getElementById("p01-grade-tab")?.getAttribute("aria-selected") === "true" || document.getElementById("h23-grade-tab")?.getAttribute("aria-selected") === "true") document.getElementById("request-status").textContent = status.textContent;
+        stopBlockSubmissionProgress(problem, status.textContent);
       }
       finally { submit.disabled = false; }
     };

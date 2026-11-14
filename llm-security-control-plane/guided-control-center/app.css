@@ -507,6 +507,10 @@ body.practice-reset-locked { overflow: hidden; }
 
 .mission-topic { margin: 0 0 6px; font-size: 12px; font-weight: 600; color: var(--muted); }
 
+#case-progress { margin: 16px 0; padding: 16px; border: 1px solid var(--blue-action); border-radius: 10px; background: var(--blue-soft); }
+#case-progress-phase { display: flex; align-items: center; gap: 10px; color: var(--blue); font-weight: 800; }
+#case-progress-phase::before { content: ""; width: 20px; height: 20px; flex: none; border: 3px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: grade-spin .75s linear infinite; }
+@media (prefers-reduced-motion: reduce) { #case-progress-phase::before { animation: none; border-right-color: currentColor; } }
 .case-card-list, #case-progress-list { list-style: none; padding: 0; display: grid; gap: 10px; }
 .case-card { border: 1px solid var(--line); border-left: 4px solid var(--muted); padding: 12px 14px; background: var(--paper); border-radius: 8px; overflow-wrap: anywhere; }
 .case-card.case-pass { border-left-color: #16865c; }

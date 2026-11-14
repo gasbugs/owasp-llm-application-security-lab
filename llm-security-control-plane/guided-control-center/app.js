@@ -1201,7 +1201,7 @@ function gradeButtonId(problem) {
   return problem === "P00" ? "tutorial-grade-check" : problem === "P01" ? "verify" : `h${problem.slice(1)}-verify`;
 }
 
-function setGradeBusy(problem, busy) {
+function setGradeBusy(problem, busy, label = "채점 중") {
   const id = gradeButtonId(problem);
   if (!id) return;
   const button = byId(id);
@@ -1216,8 +1216,30 @@ function setGradeBusy(problem, busy) {
     indicator.hidden = true;
     button.after(indicator);
   }
+  indicator.textContent = label;
   indicator.hidden = !busy;
   button.closest(".action-control")?.classList.toggle("grade-active", busy);
+}
+
+function showBlockSubmissionProgress(problem, phase) {
+  document.querySelector(".inspection").hidden = false;
+  document.querySelector(".receipt").hidden = true;
+  byId("raw").closest("details").hidden = true;
+  byId("failure-help").hidden = true;
+  byId("case-results").hidden = true;
+  byId("grading-checked-at").hidden = true;
+  byId("case-progress").hidden = false;
+  const list = byId("case-progress-list");
+  list.replaceChildren(createCaseCard({case_id: phase, status: "실행 중"}, 0));
+  setText("case-progress-phase", phase);
+  setText("request-status", `${phase}. 완료되면 테스트 케이스를 실행합니다.`);
+  setGradeBusy(problem, true, phase);
+}
+
+function stopBlockSubmissionProgress(problem, message) {
+  setGradeBusy(problem, false);
+  byId("case-progress").hidden = true;
+  setText("request-status", message);
 }
 
 function setBusy(busy, showExecution = true) {
@@ -1963,7 +1985,6 @@ async function execute(path, body) {
   };
   try {
     if ((problem && problem !== "P03")) {
-      renderCaseProgress({phase: "idle", cases: [], total: problem === "P04" ? 27 : problem === "P02" ? 22 : problem === "P01" ? 23 : problem === "P23" ? 3 : null});
       try {
         const snapshot = await fetch(`/api/test-progress/${problem}`);
         if (snapshot.ok) previousSuite = (await snapshot.json()).suite_id;
@@ -2663,6 +2684,8 @@ function selectModelCallPane(name, restore = true) {
     byId("resource-operation").hidden = true;
   } else if (restore && missionResults.has(activeProblem)) {
     renderEnvelope(missionResults.get(activeProblem));
+  } else {
+    document.querySelector(".inspection").hidden = false;
   }
 }
 byId("h23-experience-tab").addEventListener("click", () => selectModelCallPane("experience"));
