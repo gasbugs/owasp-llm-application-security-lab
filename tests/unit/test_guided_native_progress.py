@@ -1,10 +1,28 @@
 """Actual case timing, selected-call isolation and no premature grading verdict."""
-import asyncio,contextvars,functools,hmac,inspect,json,unittest
+import asyncio,contextvars,functools,hmac,inspect,json,traceback,unittest
 from pathlib import Path
 from datetime import datetime,timezone
 from fastapi import FastAPI,Header,HTTPException,Request
 from fastapi.testclient import TestClient
 ROOT=Path(__file__).resolve().parents[2]/"llm-security-control-plane/guided-labs"
+class ActionErrorTests(unittest.TestCase):
+ def test_only_learner_action_exception_has_code_location(self):
+  code=(ROOT/"h06-nemo-action/server.py").read_text()
+  code=code[code.index("def learner_action_error("):code.index('@app.post("/v1/run")')]
+  namespace={"traceback":traceback,"Path":Path}
+  exec(code,namespace)
+  local={}
+  exec(compile('def fail():\n    raise ValueError("bad")\n', 'actions.py', 'exec'),local)
+  try:local['fail']()
+  except ValueError as error:
+   result=namespace['learner_action_error'](error)
+  self.assertEqual(result['file'],'P04-02_actions.py')
+  self.assertEqual(result['line'],2)
+  self.assertEqual(result['error_type'],'ValueError')
+  try:raise RuntimeError('service failure')
+  except RuntimeError as error:
+   self.assertIsNone(namespace['learner_action_error'](error))
+
 class ProgressTests(unittest.TestCase):
  def setUp(self):
   source=(ROOT/"h06-nemo-action/server.py").read_text()

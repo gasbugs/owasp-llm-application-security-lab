@@ -2,11 +2,12 @@
 import importlib.util
 import sys
 import unittest
+import tempfile
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[2]
 CC=ROOT/"llm-security-control-plane/guided-control-center"
 sys.path.insert(0,str(CC))
-from diagnostics import diagnosis,FILES,CHECKS,SERVICES
+from diagnostics import diagnosis,learner_syntax_error,FILES,CHECKS,SERVICES
 
 class DiagnosticsTest(unittest.TestCase):
     def test_all_missions_have_existing_edit_file_and_action(self):
@@ -34,6 +35,19 @@ class DiagnosticsTest(unittest.TestCase):
     def test_raw_exception_and_credentials_are_not_forwarded(self):
         hint=diagnosis("P07",502,{"traceback":"secret", "authorization":"Bearer secret", "cause":{"secret":"hidden"}})
         self.assertNotIn("secret",str(hint))
+    def test_learner_syntax_error_reports_file_line_without_running_code(self):
+        with tempfile.TemporaryDirectory() as directory:
+            target=Path(directory)/"P04-02_actions.py"
+            target.write_text('    ALLOWED_ACTIONS = frozenset()\n')
+            result=learner_syntax_error("P06", directory)
+            self.assertEqual(result["file"], "P04-02_actions.py")
+            self.assertEqual(result["line"], 1)
+            self.assertEqual(result["error_type"], "IndentationError")
+            self.assertIn("ALLOWED_ACTIONS", result["code"])
+            target.write_text('ALLOWED_ACTIONS = frozenset()\n')
+            self.assertIsNone(learner_syntax_error("P06", directory))
+            self.assertIsNone(learner_syntax_error("P05", directory))
+
     def test_authentication_and_input_errors_have_distinct_actions(self):
         self.assertNotEqual(diagnosis("P23",401)["cause"],diagnosis("P23",422)["cause"])
 

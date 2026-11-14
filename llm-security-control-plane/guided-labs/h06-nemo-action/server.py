@@ -7,6 +7,7 @@ import hashlib
 import hmac
 import json
 import os
+import traceback
 import sqlite3
 from datetime import datetime, timezone
 from importlib.metadata import version
@@ -252,6 +253,16 @@ def readyz() -> dict[str, str]:
     return {"status": "ready", "runtime": "nemoguardrails-events"}
 
 
+def learner_action_error(error: Exception) -> dict | None:
+    """Expose a code location only when the traceback entered learner actions.py."""
+    frame = next((item for item in reversed(traceback.extract_tb(error.__traceback__))
+                  if Path(item.filename).name == "actions.py"), None)
+    if frame is None:
+        return None
+    return {"file": "P04-02_actions.py", "line": frame.lineno,
+            "error_type": type(error).__name__, "code": (frame.line or "")[:240]}
+
+
 @app.post("/v1/run")
 async def run(request: RunRequest, _authorized: None = Depends(require_control)) -> dict:
     return await execute_suite(request)
@@ -277,7 +288,13 @@ async def run_next_case(request:RunCaseRequest,_authorized:None=Depends(require_
         grant=request.cases[len(cases)]
         if previous and any(c["execution_id"]!=g.execution_id for c,g in zip(cases,request.cases)):
             raise HTTPException(409,"previous execution IDs changed")
-        result=await execute_case(request.suite_id,grant)
+        try:
+            result=await execute_case(request.suite_id,grant)
+        except Exception as error:
+            code_error = learner_action_error(error)
+            if code_error is None:
+                raise
+            raise HTTPException(status_code=500, detail={"execution_error": code_error}) from None
         receipt={"suite_id":request.suite_id,"started_at":request.started_at,"observed_at":datetime.now(timezone.utc).isoformat(),
             "source_digest":learner_digest(),"scaffold_digest":scaffold_digest(),"framework":"nemoguardrails","framework_version":FRAMEWORK_VERSION,
             "allowed_actions":sorted(ALLOWED_ACTIONS),"cases":cases+[result]}

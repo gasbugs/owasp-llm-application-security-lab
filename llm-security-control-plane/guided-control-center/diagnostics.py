@@ -36,3 +36,30 @@ def diagnosis(problem, status, observed=None):
             if isinstance(value, str) and len(value) <= 600:
                 result[key] = value
     return result
+
+
+def learner_syntax_error(problem, work=None):
+    """Describe only the syntax failure in the learner file used by a mission."""
+    from pathlib import Path
+    from block_submission import FILES, WORK
+
+    filename = FILES.get(problem)
+    if not filename or not filename.endswith(".py"):
+        return None
+    target = (Path(work) if work is not None else WORK) / filename
+    try:
+        code = target.read_text(encoding="utf-8")
+        compile(code, filename, "exec")
+    except SyntaxError as error:
+        line = (error.text or "").rstrip("\n")
+        return {
+            "file": filename,
+            "line": error.lineno,
+            "column": error.offset,
+            "error_type": type(error).__name__,
+            "message": error.msg,
+            "code": line[:240],
+        }
+    except (OSError, UnicodeError):
+        return None
+    return None

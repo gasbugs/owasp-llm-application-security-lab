@@ -56,7 +56,7 @@ async def exploration_result(value):
 ROOT = Path(__file__).parent
 sys.path.insert(0, str(ROOT))
 from progress import ProgressStore
-from diagnostics import diagnosis
+from diagnostics import diagnosis, learner_syntax_error
 
 PROGRESS = ProgressStore(os.getenv("GUIDED_PROGRESS_DATABASE", ":memory:"))
 P01_PATH = ROOT / "p01.json"
@@ -267,6 +267,9 @@ async def boundary_middleware(request: Request, call_next):
                     native_context=NATIVE_SESSION.set(session[1])
         except HTTPException:
             pass
+    syntax_problem = parts[2] if (request.method == "POST" and len(parts) == 4
+        and parts[:2] == ["api", "practice"] and parts[3] == "verify") else None
+    syntax_error = learner_syntax_error(syntax_problem) if syntax_problem else None
     diagnostic_state = {}
     diagnostic_context = DIAGNOSTIC_STATE.set(diagnostic_state)
     try:
@@ -283,6 +286,14 @@ async def boundary_middleware(request: Request, call_next):
             and parts[3] == "verify" and response.status_code == 200):
         body = b"".join([chunk async for chunk in response.body_iterator])
         payload = practice_envelope(json.loads(body), parts[2])
+        if payload.get("course_verdict") == "ERR" and syntax_error:
+            rows = payload.get("result", {}).get("cases", [])
+            for row in rows:
+                if row.get("status") == "ERR" or row.get("case_verified") is False:
+                    row["execution_error"] = syntax_error
+                    break
+            else:
+                payload.setdefault("result", {}).setdefault("cases", []).append({"case_id": "학습자 코드", "status": "ERR", "execution_error": syntax_error})
         if attempt:
             PROGRESS.finish(parts[2], attempt, payload)
         headers = {key: value for key, value in response.headers.items()
@@ -294,6 +305,13 @@ async def boundary_middleware(request: Request, call_next):
         raw = b"".join([chunk async for chunk in response.body_iterator]) if hasattr(response, "body_iterator") else response.body
         payload = json.loads(raw)
         hint = diagnosis(problem, response.status_code if response.status_code >= 400 else 502, diagnostic_state.get("diagnosis"))
+        if syntax_error and parts[-1] == "verify":
+            hint.update(cause=f"{syntax_error['error_type']}: {syntax_error['message']}",
+                        file=syntax_error["file"],
+                        field=f"{syntax_error['line']}행, {syntax_error['column']}열",
+                        next_action="표시된 학습자 코드 줄의 들여쓰기와 Python 문법을 고친 뒤 코드를 적용하고 다시 채점하세요.",
+                        model_calls="실행 기록 확인 필요 — 현재 풀이 파일에 문법 오류가 있습니다.")
+            hint.pop("log_command", None)
         def annotate(value):
             if isinstance(value, dict):
                 if value.get("status") == "ERR" or value.get("course_verdict") == "ERR":
@@ -303,6 +321,8 @@ async def boundary_middleware(request: Request, call_next):
             elif isinstance(value, list):
                 for child in value: annotate(child)
         annotate(payload)
+        if response.status_code >= 400 and parts[-1] == "verify" and syntax_error:
+            payload["cases"] = [{"case_id": "학습자 코드", "status": "ERR", "execution_error": syntax_error}]
         if response.status_code >= 400:
             payload["diagnosis"] = hint
         headers = {key: value for key, value in response.headers.items() if key.lower() != "content-length"}
@@ -1505,7 +1525,16 @@ async def verify_h06_python_action(
                 try:
                     executed=await client.post(f"{LAB06_URL}/v1/run-case",json={"suite_id":suite_id,"started_at":started_at,"cases":learner_cases,"case_id":case_id},headers={"Authorization":f"Bearer {LAB06_TOKEN}"})
                     if executed.status_code!=200:
-                        outcome={"status":"ERR","case_verified":False,"reason":"Action 케이스 실행이 완료되지 않았습니다."}
+                        try:
+                            detail=executed.json().get("detail", {})
+                        except ValueError:
+                            detail={}
+                        code_error=detail.get("execution_error") if isinstance(detail,dict) else None
+                        if not isinstance(code_error,dict) or code_error.get("file")!="P04-02_actions.py":
+                            code_error=None
+                        outcome={"status":"ERR","case_verified":False,
+                                 "reason":"학습자 Action 코드 실행 오류" if code_error else "Action 케이스 실행이 완료되지 않았습니다.",
+                                 "result":{"cases":[{"execution_error":code_error}]} if code_error else {}}
                     else:
                         checked=await client.post(f"{VERIFIER_URL}/v1/verify/h06-case",json={"suite_id":suite_id,"started_at":started_at,"case_id":case_id},headers={"Authorization":f"Bearer {VERIFIER_TOKEN}"})
                         outcome=checked.json() if checked.status_code==200 else {"status":"ERR","case_verified":False,"reason":"케이스 검증기에 연결하지 못했습니다."}

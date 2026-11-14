@@ -1056,6 +1056,38 @@ class GuidedControlCenterTests(unittest.TestCase):
             self.assertEqual([c["json"]["case_id"] for c in FakeAsyncClient.calls if c["url"].endswith("/v1/run-case")],["normal-approved","client-self-approval"])
             self.assertFalse(any(c["url"].endswith("/v1/verify/h11") for c in FakeAsyncClient.calls))
 
+    def test_h06_syntax_error_is_attached_to_failed_case(self):
+        error={"file":"P04-02_actions.py","line":3,"column":5,
+               "error_type":"IndentationError","message":"unexpected indent","code":"    ALLOWED_ACTIONS = frozenset()"}
+        original=FakeAsyncClient.post
+        async def post(client,url,**kwargs):
+            if url.endswith("/v1/run-case"):
+                raise httpx.ConnectError("worker unavailable",request=httpx.Request("POST",url))
+            return await original(client,url,**kwargs)
+        with patch.object(self.server,"learner_syntax_error",return_value=error), \
+             patch.object(self.server.httpx,"AsyncClient",FakeAsyncClient), \
+             patch.object(FakeAsyncClient,"post",post):
+            response=self.client.post("/api/practice/P06/verify",headers=self.headers)
+        self.assertEqual(response.status_code,200,response.text)
+        case=response.json()["result"]["cases"][0]
+        self.assertEqual(case["status"],"ERR")
+        self.assertEqual(case["execution_error"],error)
+
+    def test_h06_runtime_action_error_reaches_failed_case(self):
+        original=FakeAsyncClient.post
+        code_error={"file":"P04-02_actions.py","line":24,"error_type":"ValueError","code":"raise ValueError('bad')"}
+        async def post(client,url,**kwargs):
+            if url.endswith("/v1/run-case"):
+                return FakeResponse({"detail":{"execution_error":code_error}},500)
+            return await original(client,url,**kwargs)
+        with patch.object(self.server.httpx,"AsyncClient",FakeAsyncClient), patch.object(FakeAsyncClient,"post",post):
+            response=self.client.post("/api/practice/P06/verify",headers=self.headers)
+        self.assertEqual(response.status_code,200,response.text)
+        row=response.json()["result"]["cases"][0]
+        self.assertEqual(row["execution_error"],code_error)
+        self.assertEqual(row["status"],"ERR")
+        self.assertIn("Action 코드 실행 오류",row["reason"])
+
     def test_h06_transport_error_marks_first_case_err_and_later_cases_unexecuted(self):
         original=FakeAsyncClient.post
         async def post(client,url,**kwargs):

@@ -1770,7 +1770,9 @@ function createCaseCard(item, index) {
     ["처리 경로", item.dialog_path],
     ["오류", item.error ?? item.detail],
     ["실행 오류 출력", item.stderr ?? item.traceback],
-    ["컨테이너 로그 · 최근 30줄", item.container_logs],
+    ["학습자 코드 실행 오류", item.execution_error && typeof item.execution_error === "object"
+      ? `${item.execution_error.file} ${item.execution_error.line}행${item.execution_error.column ? ` ${item.execution_error.column}열` : ""} · ${item.execution_error.error_type}${item.execution_error.message ? `: ${item.execution_error.message}` : ""}${item.execution_error.code ? `\n${item.execution_error.code}` : ""}`
+      : item.execution_error],
     ["다음 확인", item.next_check],
   ];
   if (item.diagnosis) {
