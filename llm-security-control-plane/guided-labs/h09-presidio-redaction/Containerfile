@@ -7,7 +7,7 @@ ENV PIP_NO_CACHE_DIR=1 \
 COPY guided-labs/h09-presidio-redaction/requirements.txt /tmp/requirements.txt
 RUN python -m pip install --requirement /tmp/requirements.txt \
     && python -m pip install \
-      'https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl' \
+      'https://github.com/explosion/spacy-models/releases/download/ko_core_news_sm-3.8.0/ko_core_news_sm-3.8.0-py3-none-any.whl' \
     && python -c "import tldextract; tldextract.extract('example.com')"
 
 WORKDIR /app/learner

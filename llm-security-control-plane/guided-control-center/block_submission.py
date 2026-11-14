@@ -135,7 +135,7 @@ BLOCKS = {
         "register": ("registry", "analyzer.registry.add_recognizer(KrRrnRecognizer(supported_language=LANGUAGE))"),
         "release_safe": ("release", '"released_text": sanitized,'),
         "entities_email": ("entities", 'ENTITIES = ("EMAIL_ADDRESS",)'),
-        "register_ko": ("registry", 'analyzer.registry.add_recognizer(KrRrnRecognizer(supported_language="ko"))'),
+        "register_en": ("registry", 'analyzer.registry.add_recognizer(KrRrnRecognizer(supported_language="en"))'),
         "release_raw": ("release", '"released_text": text,'),
         "strip_numbers": ("release", '"released_text": "".join(char for char in text if not char.isdigit()),'),
     },

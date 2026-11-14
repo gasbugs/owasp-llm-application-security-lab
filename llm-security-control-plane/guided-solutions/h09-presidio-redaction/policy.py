@@ -12,7 +12,7 @@ from presidio_anonymizer.entities import OperatorConfig
 
 
 FRAMEWORK_VERSION = version("presidio-analyzer")
-LANGUAGE = "en"
+LANGUAGE = "ko"
 ENTITIES = ("EMAIL_ADDRESS", "KR_RRN")
 
 
@@ -21,7 +21,7 @@ def build_engines() -> tuple[AnalyzerEngine, AnonymizerEngine]:
     nlp = NlpEngineProvider(
         nlp_configuration={
             "nlp_engine_name": "spacy",
-            "models": [{"lang_code": LANGUAGE, "model_name": "en_core_web_sm"}],
+            "models": [{"lang_code": LANGUAGE, "model_name": "ko_core_news_sm"}],
         }
     ).create_engine()
     analyzer = AnalyzerEngine(nlp_engine=nlp, supported_languages=[LANGUAGE])
