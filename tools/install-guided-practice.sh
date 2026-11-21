@@ -30,6 +30,21 @@ if [[ "$ec2" == false && -f "$EC2_STATE/public-ip.env" ]]; then
   fail "이 실습실은 EC2용으로 설치되어 있습니다. --ec2를 사용하세요."
 fi
 
+enable_ec2_autostart() {
+  [[ "${GUIDED_EC2_BOOT:-0}" != 1 ]] || return 0
+  systemctl --user show-environment >/dev/null 2>&1 ||
+    fail "LDL 자동 시작을 등록하려면 Ubuntu 사용자 systemd 세션이 필요합니다."
+  if [[ "$(loginctl show-user "$(id -un)" --property=Linger --value)" != yes ]]; then
+    sudo loginctl enable-linger "$(id -un)"
+  fi
+  local unit_dir="${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user"
+  install -d -m 0700 "$unit_dir"
+  install -m 0644 "$SETUP_ROOT/tools/systemd/guided-ec2-resume.service" "$unit_dir/"
+  systemctl --user daemon-reload
+  systemctl --user enable guided-ec2-resume.service
+  printf 'EC2 재시작 시 LDL 자동 시작을 등록했습니다.\n'
+}
+
 log "1/5" "필수 프로그램과 AWS 자격 증명을 확인합니다."
 for command_name in docker aws openssl python3 grep sort git tar; do
   command -v "$command_name" >/dev/null 2>&1 ||
@@ -55,6 +70,7 @@ if [[ "$resume" == true ]]; then
   public_ip="$(python3 "$SETUP_ROOT/tools/guided_ec2_config.py" "$EC2_STATE")"
   "$guided_compose" start
   "$guided_compose" up -d --no-deps --no-build --wait --wait-timeout 180 guided-control-center guided-front-proxy
+  enable_ec2_autostart
   printf '\nLDL 홈: http://%s:9010/\n' "$public_ip"
   exit 0
 fi
@@ -150,7 +166,7 @@ if (( ${#stale_services[@]} > 0 )); then
 fi
 
 # 블록 제출은 Docker socket을 UI에 노출하지 않고 WSL 사용자 서비스가 적용합니다.
-if command -v systemctl >/dev/null 2>&1 && systemctl --user is-system-running >/dev/null 2>&1; then
+if command -v systemctl >/dev/null 2>&1 && systemctl --user show-environment >/dev/null 2>&1; then
   install -d -m 0700 "$HOME/.config/systemd/user"
   install -m 0644 "$SETUP_ROOT/tools/systemd/guided-block-build.service" "$HOME/.config/systemd/user/guided-block-build.service"
   install -m 0644 "$SETUP_ROOT/tools/systemd/guided-block-build.path" "$HOME/.config/systemd/user/guided-block-build.path"
@@ -164,6 +180,7 @@ fi
 
 printf '\n설치가 완료되었습니다.\n'
 if [[ "$ec2" == true ]]; then
+  enable_ec2_autostart
   printf 'LDL 홈: http://%s:9010/\n' "$public_ip"
   printf 'NeMo Chat UI: http://%s:9011/\n' "$public_ip"
   printf 'Grafana Explore: http://%s:9012/explore\n' "$public_ip"

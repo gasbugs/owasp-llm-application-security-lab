@@ -168,6 +168,23 @@ for helper in initialize-guided-practice prepare-guided-practice-build; do
   chmod +x "tools/$helper.sh"
 done
 cp "$source_root/tools/practice_preflight.py" "$source_root/tools/check_guided_isolation.py" tools/
+mkdir -p tools/systemd
+cp "$source_root/tools/systemd/guided-ec2-resume.service" tools/systemd/
+cat > "$scratch/bin/systemctl" <<'MOCK_SYSTEMD'
+#!/usr/bin/env bash
+set -eu
+printf '%s\n' "$*" >> "$LDL_CHECK_ROOT/systemd.log"
+case "$*" in
+  '--user show-environment'|'--user daemon-reload'|'--user enable guided-ec2-resume.service') ;;
+  *) exit 2 ;;
+esac
+MOCK_SYSTEMD
+cat > "$scratch/bin/loginctl" <<'MOCK_LOGINCTL'
+#!/usr/bin/env bash
+set -eu
+[[ "$1" == show-user && "$3" == --property=Linger && "$4" == --value ]]
+printf 'yes\n'
+MOCK_LOGINCTL
 chmod +x "$scratch/bin/"*
 rm -f -- "$new_ip_dir/public-ip.env" llm-security-control-plane/.state/guided-course.env
 status=0
@@ -181,7 +198,7 @@ fi
 grep -E 'compose .*compose.guided-ec2.yaml up -d --build' "$scratch/docker.log" >/dev/null
 grep -Fx 'GUIDED_EC2_PUBLIC_IP=198.51.100.10' "$new_ip_dir/public-ip.env" >/dev/null
 cp llm-security-control-plane/.state/guided-course.env "$scratch/course-env-before"
-PATH="$scratch/bin:$PATH" LDL_CHECK_IP=198.51.100.20 \
+PATH="$scratch/bin:$PATH" XDG_CONFIG_HOME="$scratch/config" LDL_CHECK_IP=198.51.100.20 \
   bash tools/install-guided-practice.sh --ec2 --resume > "$scratch/resume.log"
 grep -E 'compose .*compose.guided-ec2.yaml start$' "$scratch/docker.log" >/dev/null
 grep -E 'compose .*up -d --no-deps --no-build .*guided-control-center guided-front-proxy$' "$scratch/docker.log" >/dev/null
@@ -190,3 +207,17 @@ grep -Fx '198.51.100.20 1;' "$new_ip_dir/hosts/public-ip.conf" >/dev/null
 grep -Fx 'LDL 홈: http://198.51.100.20:9010/' "$scratch/resume.log" >/dev/null
 cmp llm-security-control-plane/.state/guided-course.env "$scratch/course-env-before"
 echo 'Installer and resume: IAM role fixture, updated address and preserved course credentials PASS'
+
+unit=guided-ec2-resume.service
+cmp "tools/systemd/$unit" "$scratch/config/systemd/user/$unit"
+grep -Fx -- '--user enable guided-ec2-resume.service' "$scratch/systemd.log" >/dev/null
+grep -Fx 'WantedBy=default.target' "tools/systemd/$unit" >/dev/null
+grep -Fx 'Environment=GUIDED_EC2_BOOT=1' "tools/systemd/$unit" >/dev/null
+grep -Fx 'Restart=on-failure' "tools/systemd/$unit" >/dev/null
+cp "$scratch/systemd.log" "$scratch/systemd-before.log"
+PATH="$scratch/bin:$PATH" GUIDED_EC2_BOOT=1 LDL_CHECK_IP=198.51.100.30 \
+  bash tools/install-guided-practice.sh --ec2 --resume > "$scratch/boot.log"
+cmp "$scratch/systemd.log" "$scratch/systemd-before.log"
+grep -Fx 'GUIDED_EC2_PUBLIC_IP=198.51.100.30' "$new_ip_dir/public-ip.env" >/dev/null
+grep -Fx '198.51.100.30 1;' "$new_ip_dir/hosts/public-ip.conf" >/dev/null
+echo 'Autostart enrollment and unattended boot mode PASS'

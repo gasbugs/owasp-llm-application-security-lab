@@ -11,6 +11,7 @@ on:
       - "tools/guided-compose.sh"
       - "tools/guided_ec2_config.py"
       - "tools/install-guided-practice.sh"
+      - "tools/systemd/guided-ec2-resume.service"
       - "tools/reset-guided-practice.py"
       - "tools/check-ldl-ec2-deployment.sh"
       - "tools/practice_preflight.py"

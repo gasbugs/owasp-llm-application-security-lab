@@ -1,0 +1,17 @@
+[Unit]
+Description=Start LDL and refresh its EC2 address
+ConditionPathExists=%h/owasp-llm-lab-setup-guide/llm-security-control-plane/.state/guided-ec2/public-ip.env
+StartLimitIntervalSec=30min
+StartLimitBurst=5
+
+[Service]
+Type=oneshot
+Environment=GUIDED_EC2_BOOT=1
+ExecStart=/bin/bash %h/owasp-llm-lab-setup-guide/tools/install-guided-practice.sh --ec2 --resume
+RemainAfterExit=yes
+TimeoutStartSec=5min
+Restart=on-failure
+RestartSec=15s
+
+[Install]
+WantedBy=default.target
