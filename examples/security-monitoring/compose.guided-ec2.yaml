@@ -2,12 +2,6 @@
 # Format reference: Docker Compose Specification, https://compose-spec.io/
 # Upstream license: Apache-2.0
 
-x-ec2-role: &ec2-role
-  AWS_EC2_METADATA_DISABLED: "false"
-  AWS_PROFILE: !reset null
-  AWS_SHARED_CREDENTIALS_FILE: !reset null
-  AWS_CONFIG_FILE: !reset null
-
 services:
   guided-front-proxy:
     environment:
@@ -42,17 +36,29 @@ services:
       GF_AUTH_LOGIN_COOKIE_NAME: ec2_mission_grafana_session
 
   guided-model-call:
-    environment: *ec2-role
+    environment:
+      AWS_EC2_METADATA_DISABLED: "false"
+      AWS_PROFILE: !reset null
+      AWS_SHARED_CREDENTIALS_FILE: !reset null
+      AWS_CONFIG_FILE: !reset null
     volumes:
       - guided-ec2-empty-aws:/tmp/.aws:ro
 
   guided-h01-gateway:
-    environment: *ec2-role
+    environment:
+      AWS_EC2_METADATA_DISABLED: "false"
+      AWS_PROFILE: !reset null
+      AWS_SHARED_CREDENTIALS_FILE: !reset null
+      AWS_CONFIG_FILE: !reset null
     volumes:
       - guided-ec2-empty-aws:/tmp/.aws:ro
 
   guided-bedrock-gateway:
-    environment: *ec2-role
+    environment:
+      AWS_EC2_METADATA_DISABLED: "false"
+      AWS_PROFILE: !reset null
+      AWS_SHARED_CREDENTIALS_FILE: !reset null
+      AWS_CONFIG_FILE: !reset null
     volumes:
       - guided-ec2-empty-aws:/tmp/.aws:ro
 
