@@ -11,9 +11,6 @@ import uuid
 
 ROOT = Path(__file__).resolve().parents[1]
 CONTROL = ROOT / "llm-security-control-plane"
-COMPOSE = ROOT / "examples/security-monitoring/compose.guided.yaml"
-ENV = CONTROL / ".state/guided-course.env"
-OVERRIDE = CONTROL / ".state/guided-practice-build.override.yaml"
 PROGRESS_VOLUME = "llm-security-guided-course_guided-control-progress"
 CONTROL_IMAGE = "localhost/llm-security-guided-control-center:0.1.0"
 PROGRESS_FILE = ROOT / ".state/guided-reset-progress.json"
@@ -31,8 +28,7 @@ def run(*args, capture=False):
 
 
 def compose(*args):
-    return run("docker", "compose", "--env-file", str(ENV), "-f", str(COMPOSE),
-               "-f", str(OVERRIDE), *args)
+    return run(str(ROOT / "tools/guided-compose.sh"), *args)
 
 
 def load_audit():

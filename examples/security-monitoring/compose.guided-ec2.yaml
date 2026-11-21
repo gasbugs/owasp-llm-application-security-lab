@@ -1,0 +1,60 @@
+# CUSTOM FILE
+# Format reference: Docker Compose Specification, https://compose-spec.io/
+# Upstream license: Apache-2.0
+
+x-ec2-role: &ec2-role
+  AWS_EC2_METADATA_DISABLED: "false"
+  AWS_PROFILE: !reset null
+  AWS_SHARED_CREDENTIALS_FILE: !reset null
+  AWS_CONFIG_FILE: !reset null
+
+services:
+  guided-front-proxy:
+    environment:
+      GUIDED_EC2_PUBLIC_IP: ${GUIDED_EC2_PUBLIC_IP:?Install LDL with --ec2}
+    ports:
+      - "0.0.0.0:9010:18097"
+      - "0.0.0.0:9011:18192"
+      - "0.0.0.0:9014:19014"
+      - "0.0.0.0:9015:19015"
+    volumes:
+      - ../../llm-security-control-plane/.state/guided-ec2/hosts:/etc/nginx/guided-ec2/hosts:ro
+      - ../../llm-security-control-plane/guided-front-proxy/ec2-viewers.conf:/etc/nginx/guided-ec2/servers/viewers.conf:ro
+
+  guided-control-center:
+    environment:
+      GUIDED_ALLOWED_HOSTS: 127.0.0.1:${GUIDED_HOST_PORT:-28097},localhost:${GUIDED_HOST_PORT:-28097},${GUIDED_EC2_PUBLIC_IP}:9010
+      GUIDED_ALLOWED_ORIGINS: http://127.0.0.1:${GUIDED_HOST_PORT:-28097},http://localhost:${GUIDED_HOST_PORT:-28097},http://${GUIDED_EC2_PUBLIC_IP}:9010
+      GUIDED_NEMO_BROWSER_URL: http://${GUIDED_EC2_PUBLIC_IP}:9011/
+      GUIDED_GRAFANA_BROWSER_URL: http://${GUIDED_EC2_PUBLIC_IP}:9012/explore
+      GUIDED_P20_GRAFANA_BROWSER_URL: http://${GUIDED_EC2_PUBLIC_IP}:9013/d/guided-p20
+      GUIDED_PROMPTFOO_BROWSER_URL: http://${GUIDED_EC2_PUBLIC_IP}:9014/
+      GUIDED_PYRIT_BROWSER_URL: http://${GUIDED_EC2_PUBLIC_IP}:9015/
+
+  guided-grafana:
+    ports: ["0.0.0.0:9012:3000"]
+    environment:
+      GF_AUTH_LOGIN_COOKIE_NAME: ec2_ldl_grafana_session
+
+  guided-h20-grafana:
+    ports: ["0.0.0.0:9013:3000"]
+    environment:
+      GF_AUTH_LOGIN_COOKIE_NAME: ec2_mission_grafana_session
+
+  guided-model-call:
+    environment: *ec2-role
+    volumes:
+      - guided-ec2-empty-aws:/tmp/.aws:ro
+
+  guided-h01-gateway:
+    environment: *ec2-role
+    volumes:
+      - guided-ec2-empty-aws:/tmp/.aws:ro
+
+  guided-bedrock-gateway:
+    environment: *ec2-role
+    volumes:
+      - guided-ec2-empty-aws:/tmp/.aws:ro
+
+volumes:
+  guided-ec2-empty-aws:
