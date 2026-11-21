@@ -9,7 +9,8 @@ on:
       - "tests/**"
       - "docs/**"
       - "examples/**"
-      - ".github/workflows/build-and-push.yaml"
+      # LDL deployment files use the dedicated LDL EC2 deployment workflow.
+      - "!examples/security-monitoring/compose.guided-ec2.yaml"
   push:
     branches: [main]
     paths:
@@ -19,7 +20,8 @@ on:
       - "tests/**"
       - "docs/**"
       - "examples/**"
-      - ".github/workflows/build-and-push.yaml"
+      # LDL deployment files use the dedicated LDL EC2 deployment workflow.
+      - "!examples/security-monitoring/compose.guided-ec2.yaml"
   workflow_dispatch:
 
 concurrency:

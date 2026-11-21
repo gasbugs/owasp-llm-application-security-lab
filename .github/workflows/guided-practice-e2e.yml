@@ -4,9 +4,33 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
-    paths: ["llm-security-control-plane/**", "examples/security-monitoring/**", "tests/**", "tools/practice_*.py", "tools/check_guided_scaffold_digests.py", "tools/check-guided-reset-*.py", "tools/reset-guided-practice.py", ".github/workflows/guided-practice-e2e.yml"]
+    paths:
+      - "llm-security-control-plane/**"
+      - "examples/security-monitoring/**"
+      - "tests/**"
+      - "tools/practice_*.py"
+      - "tools/check_guided_scaffold_digests.py"
+      - "tools/check-guided-reset-*.py"
+      - "tools/reset-guided-practice.py"
+      # LDL deployment files use the dedicated LDL EC2 deployment workflow.
+      - "!examples/security-monitoring/compose.guided-ec2.yaml"
+      - "!llm-security-control-plane/guided-front-proxy/nginx.conf"
+      - "!llm-security-control-plane/guided-front-proxy/ec2-viewers.conf"
+      - "!tools/reset-guided-practice.py"
   pull_request:
-    paths: ["llm-security-control-plane/**", "examples/security-monitoring/**", "tests/**", "tools/practice_*.py", "tools/check_guided_scaffold_digests.py", "tools/check-guided-reset-*.py", "tools/reset-guided-practice.py", ".github/workflows/guided-practice-e2e.yml"]
+    paths:
+      - "llm-security-control-plane/**"
+      - "examples/security-monitoring/**"
+      - "tests/**"
+      - "tools/practice_*.py"
+      - "tools/check_guided_scaffold_digests.py"
+      - "tools/check-guided-reset-*.py"
+      - "tools/reset-guided-practice.py"
+      # LDL deployment files use the dedicated LDL EC2 deployment workflow.
+      - "!examples/security-monitoring/compose.guided-ec2.yaml"
+      - "!llm-security-control-plane/guided-front-proxy/nginx.conf"
+      - "!llm-security-control-plane/guided-front-proxy/ec2-viewers.conf"
+      - "!tools/reset-guided-practice.py"
 
 permissions:
   contents: read

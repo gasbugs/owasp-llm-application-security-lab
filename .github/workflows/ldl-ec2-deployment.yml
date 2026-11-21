@@ -1,0 +1,36 @@
+name: LDL EC2 deployment
+
+on:
+  push:
+    branches: [main, "codex/**"]
+    paths: &deployment_paths
+      - "examples/security-monitoring/compose.guided-ec2.yaml"
+      - "llm-security-control-plane/guided-front-proxy/nginx.conf"
+      - "llm-security-control-plane/guided-front-proxy/ec2-viewers.conf"
+      - "tools/apply-guided-practice.sh"
+      - "tools/guided-compose.sh"
+      - "tools/guided_ec2_config.py"
+      - "tools/install-guided-practice.sh"
+      - "tools/reset-guided-practice.py"
+      - "tools/check-ldl-ec2-deployment.sh"
+      - "tools/practice_preflight.py"
+      - "tools/check_guided_isolation.py"
+      - ".github/workflows/ldl-ec2-deployment.yml"
+      - ".github/workflows/build-and-push.yaml"
+      - ".github/workflows/module08-docker-e2e.yml"
+      - ".github/workflows/module09-docker-e2e.yml"
+      - ".github/workflows/guided-practice-e2e.yml"
+      - ".github/workflows/mtl-audit-e2e.yml"
+  pull_request:
+    paths: *deployment_paths
+
+permissions:
+  contents: read
+
+jobs:
+  install-and-resume:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v6
+      - run: bash tools/check-ldl-ec2-deployment.sh

@@ -3,9 +3,23 @@ name: Security MTL audit reliability
 on:
   push:
     branches: [main]
-    paths: ["llm-security-control-plane/application-gateway/**", "llm-security-control-plane/shared/**", "examples/security-monitoring/**", "tests/e2e/security-monitoring/**", "tests/unit/test_security_telemetry_delivery.py", ".github/workflows/mtl-audit-e2e.yml"]
+    paths:
+      - "llm-security-control-plane/application-gateway/**"
+      - "llm-security-control-plane/shared/**"
+      - "examples/security-monitoring/**"
+      - "tests/e2e/security-monitoring/**"
+      - "tests/unit/test_security_telemetry_delivery.py"
+      # LDL deployment files use the dedicated LDL EC2 deployment workflow.
+      - "!examples/security-monitoring/compose.guided-ec2.yaml"
   pull_request:
-    paths: ["llm-security-control-plane/application-gateway/**", "llm-security-control-plane/shared/**", "examples/security-monitoring/**", "tests/e2e/security-monitoring/**", "tests/unit/test_security_telemetry_delivery.py", ".github/workflows/mtl-audit-e2e.yml"]
+    paths:
+      - "llm-security-control-plane/application-gateway/**"
+      - "llm-security-control-plane/shared/**"
+      - "examples/security-monitoring/**"
+      - "tests/e2e/security-monitoring/**"
+      - "tests/unit/test_security_telemetry_delivery.py"
+      # LDL deployment files use the dedicated LDL EC2 deployment workflow.
+      - "!examples/security-monitoring/compose.guided-ec2.yaml"
 
 permissions:
   contents: read

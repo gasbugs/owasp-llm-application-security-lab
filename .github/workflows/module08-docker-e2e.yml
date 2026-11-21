@@ -18,7 +18,10 @@ on:
       - "tests/e2e/run_guided_h10_h20_learner_fixes.py"
       - "tests/e2e/run_guided_h01_h04_h21_h22_learner_fixes.py"
       - "tests/e2e/module10/**"
-      - ".github/workflows/module08-docker-e2e.yml"
+      # LDL deployment files use the dedicated LDL EC2 deployment workflow.
+      - "!examples/security-monitoring/compose.guided-ec2.yaml"
+      - "!llm-security-control-plane/guided-front-proxy/nginx.conf"
+      - "!llm-security-control-plane/guided-front-proxy/ec2-viewers.conf"
 
 permissions:
   contents: read
