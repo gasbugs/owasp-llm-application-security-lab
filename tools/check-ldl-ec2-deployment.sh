@@ -78,6 +78,7 @@ for cfg, ip in ((old, "198.51.100.10"), (new, "198.51.100.20")):
         f"http://{ip}:9014/", f"http://{ip}:9015/",
     }
     assert svc["guided-front-proxy"]["environment"]["GUIDED_EC2_PUBLIC_IP"] == ip
+    assert svc["guided-model-call"]["environment"]["AWS_DEFAULT_REGION"] == "us-east-1"
     for service in ("guided-model-call", "guided-h01-gateway", "guided-bedrock-gateway"):
         env = svc[service]["environment"]
         assert env["AWS_EC2_METADATA_DISABLED"] == "false"

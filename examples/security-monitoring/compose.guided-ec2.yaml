@@ -37,6 +37,7 @@ services:
 
   guided-model-call:
     environment:
+      AWS_DEFAULT_REGION: "${GUIDED_EC2_REGION:-us-east-1}"
       AWS_EC2_METADATA_DISABLED: "false"
       AWS_PROFILE: !reset null
       AWS_SHARED_CREDENTIALS_FILE: !reset null
