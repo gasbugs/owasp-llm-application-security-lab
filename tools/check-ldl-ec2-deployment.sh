@@ -25,6 +25,7 @@ new_ip_dir=llm-security-control-plane/.state/guided-ec2
 mkdir -p llm-security-control-plane/.state
 grep -oE '\$\{[A-Z][A-Z0-9_]+:\?' examples/security-monitoring/compose.guided.yaml |
   sed -E 's/^\$\{([^:]+):\?$/\1=isolated-test-value/' | sort -u > llm-security-control-plane/.state/guided-course.env
+docker compose version
 base_config=$(mktemp "$scratch/render.XXXXXXXX")
 before_config=$(mktemp "$scratch/render.XXXXXXXX")
 after_config=$(mktemp "$scratch/render.XXXXXXXX")
@@ -80,7 +81,8 @@ for cfg, ip in ((old, "198.51.100.10"), (new, "198.51.100.20")):
     for service in ("guided-model-call", "guided-h01-gateway", "guided-bedrock-gateway"):
         env = svc[service]["environment"]
         assert env["AWS_EC2_METADATA_DISABLED"] == "false"
-        assert not ({"AWS_PROFILE", "AWS_SHARED_CREDENTIALS_FILE", "AWS_CONFIG_FILE"} & env.keys())
+        removed = {"AWS_PROFILE", "AWS_SHARED_CREDENTIALS_FILE", "AWS_CONFIG_FILE"}
+        assert not (removed & env.keys()), (service, {k: env[k] for k in removed & env.keys()})
         aws_mount = [v for v in svc[service]["volumes"] if v["target"] == "/tmp/.aws"]
         assert len(aws_mount) == 1 and aws_mount[0]["type"] == "volume" and aws_mount[0]["read_only"]
         assert all(v in svc[service]["volumes"] for v in base["services"][service]["volumes"] if v["target"] != "/tmp/.aws")
