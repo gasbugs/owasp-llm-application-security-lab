@@ -67,11 +67,18 @@ class GuidedInstallerTests(unittest.TestCase):
         self.assertIn('show "HEAD:llm-security-control-plane/$source_path"', init)
         self.assertIn('archive HEAD llm-security-control-plane', prepare)
         self.assertIn('install -D -m 0644 "$workspace_file" "$BUILD_ROOT/$source_path"', prepare)
-        self.assertIn('--file "$override_file" build', apply)
+        compose = (ROOT / "tools/guided-compose.sh").read_text()
+        self.assertIn('"$guided_compose" build "${services[@]}"', apply)
+        self.assertIn('options+=(--file "$state/guided-practice-build.override.yaml")', compose)
+        self.assertIn('exec docker compose "${options[@]}" "$@"', compose)
         self.assertNotIn('cp "$workspace_file" "$CONTROL_ROOT/', apply)
         self.assertIn('initialize-guided-practice.sh', self.text)
         self.assertIn('prepare-guided-practice-build.sh', self.text)
-        self.assertIn('--file "$PRACTICE_OVERRIDE"', self.text)
+        self.assertIn('"$guided_compose" up -d --build', self.text)
+        self.assertLess(
+            self.text.index('prepare-guided-practice-build.sh'),
+            self.text.index('"$guided_compose" up -d --build'),
+        )
 
     def test_control_center_edits_and_applies_numbered_workspace_files(self):
         html = (ROOT / "llm-security-control-plane/guided-control-center/index.html").read_text()

@@ -20,10 +20,15 @@ class RepositoryLicenseTest(unittest.TestCase):
 
     def test_dual_license_and_mit_transition_are_disclosed(self) -> None:
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        korean = (ROOT / "README.ko.md").read_text(encoding="utf-8")
         commercial = (ROOT / "COMMERCIAL-LICENSE.md").read_text(encoding="utf-8")
         notice = (ROOT / "NOTICE.md").read_text(encoding="utf-8")
-        self.assertIn("PolyForm Noncommercial License 1.0.0", readme)
-        self.assertIn("상업용 라이선스", readme)
+        for guide in (readme, korean):
+            self.assertIn("PolyForm Noncommercial License 1.0.0", guide)
+            self.assertIn("(COMMERCIAL-LICENSE.md)", guide)
+            self.assertIn("MIT License", guide)
+        self.assertIn("Commercial use requires", readme)
+        self.assertIn("상업용 라이선스", korean)
         self.assertIn("Earlier MIT releases", commercial)
         self.assertIn("previously distributed under the MIT License", notice)
 
