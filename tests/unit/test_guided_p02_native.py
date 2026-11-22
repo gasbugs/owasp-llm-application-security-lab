@@ -124,22 +124,40 @@ class CredentialBoundaryTests(unittest.TestCase):
         self.assertEqual(self.client.post("/native-record",json={**self.body,"capability":self.grant["capability"],"operation":"store_source","request_digest":"c"*64,"response":None},headers=headers).status_code,401)
         self.issuer.assert_not_called()
     def test_sts_policy_is_one_document_and_one_model(self):
+        self.check_sts_policy()
+
+    def test_assumed_role_uses_the_same_scope(self):
+        self.check_sts_policy("arn:aws:iam::123456789012:role/ldl-learner-fixture")
+
+    def check_sts_policy(self, role_arn=None):
         state={"status":"READY","provider_mode":"aws","region":"us-east-1","source_prefix":"h02/knowledge/","source_bucket":"native-fixture-bucket"}
         sts=boto3.client("sts",region_name="us-east-1",aws_access_key_id="fixture",aws_secret_access_key="fixture")
         stub=Stubber(sts)
-        stub.add_response("get_federation_token",{"Credentials":{"AccessKeyId":"A"*20,"SecretAccessKey":"S"*40,
-            "SessionToken":"fixture-session","Expiration":datetime.now(timezone.utc)},
-            "FederatedUser":{"FederatedUserId":"123456789012:fixture","Arn":"arn:aws:sts::123456789012:federated-user/fixture"}})
+        credentials = {"AccessKeyId": "A" * 20, "SecretAccessKey": "S" * 40,
+                       "SessionToken": "fixture-session", "Expiration": datetime.now(timezone.utc)}
+        if role_arn:
+            operation = "assume_role"
+            principal = {"AssumedRoleUser": {"AssumedRoleId": "AROAEXAMPLE:fixture",
+                         "Arn": "arn:aws:sts::123456789012:assumed-role/ldl-learner-fixture/fixture"}}
+        else:
+            operation = "get_federation_token"
+            principal = {"FederatedUser": {"FederatedUserId": "123456789012:fixture",
+                         "Arn": "arn:aws:sts::123456789012:federated-user/fixture"}}
+        stub.add_response(operation, {"Credentials": credentials, **principal})
         stub.activate()
-        sts.get_federation_token=MagicMock(wraps=sts.get_federation_token)
+        issuer = MagicMock(wraps=getattr(sts, operation))
+        setattr(sts, operation, issuer)
         def factory(name,**kwargs):return sts if name=="sts" else MagicMock()
         with patch("p02_gateway.boto3.client",side_effect=factory):
-            app=configured_app(lambda:state,Path(self.tmp.name)/"other.sqlite",provider_mode="aws",control_token="control",verifier_token="verifier",region="us-east-1")
+            app=configured_app(lambda:state,Path(self.tmp.name)/"other.sqlite",provider_mode="aws",control_token="control",verifier_token="verifier",region="us-east-1",learner_role_arn=role_arn)
             client=TestClient(app)
             grant=client.post("/executions",headers={"Authorization":"Bearer control"},json={**self.body,"source_digest":"a"*64,"runner_digest":"b"*64}).json()
             response=client.post("/native-credentials",headers={"Authorization":"Bearer "+grant["capability"]},json=self.body)
         self.assertEqual(response.status_code,200)
-        args=sts.get_federation_token.call_args.kwargs
+        args=issuer.call_args.kwargs
+        if role_arn:
+            self.assertEqual(args["RoleArn"], role_arn)
+            self.assertEqual(args["RoleSessionName"], "p02-" + self.execution[:24])
         self.assertEqual(args["DurationSeconds"],900)
         statements=json.loads(args["Policy"])["Statement"]
         self.assertEqual(statements,[{"Effect":"Allow","Action":"s3:PutObject","Resource":f"arn:aws:s3:::native-fixture-bucket/h02/knowledge/{self.execution}.md"},

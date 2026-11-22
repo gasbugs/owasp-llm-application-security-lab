@@ -756,15 +756,18 @@ app.include_router(h08_router)
 from p12_gateway import configured_app as p12_configured_app
 app.mount("/v1/p12", p12_configured_app())
 from p02_gateway import configured_app as p02_configured_app
+learner_role_arn = os.getenv("GUIDED_LDL_LEARNER_ROLE_ARN")
 app.mount("/v1/p02", p02_configured_app(
     load_h02_state, DATABASE_PATH, provider_mode=PROVIDER_MODE,
     control_token=H02_RUNTIME_TOKEN, verifier_token=VERIFIER_TOKEN, region=AWS_REGION,
+    learner_role_arn=learner_role_arn,
 ))
 from p03_gateway import configured_app as p03_configured_app
 app.mount("/v1/p03", p03_configured_app(
     DATABASE_PATH, provider_mode=PROVIDER_MODE,
     control_token=os.environ["GUIDED_H03_GATEWAY_TOKEN"], verifier_token=VERIFIER_TOKEN, region=AWS_REGION,
     provision_token=os.getenv("GUIDED_LAB03_PROVISION_TOKEN"),
+    learner_role_arn=learner_role_arn,
 ))
 from p04_gateway import configured_app as p04_configured_app
 app.mount("/v1/p04", p04_configured_app(

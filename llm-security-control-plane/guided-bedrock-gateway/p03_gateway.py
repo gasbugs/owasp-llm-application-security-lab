@@ -25,7 +25,8 @@ def load_cases():
     return module.cases()
 
 
-def configured_app(database_path, *, provider_mode, control_token, verifier_token, region, provision_token=None):
+def configured_app(database_path, *, provider_mode, control_token, verifier_token, region, provision_token=None,
+                   learner_role_arn=None):
     if provider_mode not in {"aws", "contract"} or region != "us-east-1":
         raise ValueError("explicit P03 provider mode and course region required")
     ledger = SearchLedger(database_path)
@@ -86,8 +87,14 @@ def configured_app(database_path, *, provider_mode, control_token, verifier_toke
             policy = {'Version': '2012-10-17', 'Statement': [{'Effect': 'Allow',
                 'Action': ['bedrock:GetIngestionJob', 'bedrock:Retrieve'],
                 'Resource': f"arn:aws:bedrock:{region}:{account}:knowledge-base/{binding['knowledge_base_id']}"}]}
-            credentials = sts.get_federation_token(Name='p03-'+execution_id[:24], DurationSeconds=900,
-                Policy=json.dumps(policy, separators=(',', ':')))['Credentials']
+            session_name = 'p03-' + execution_id[:24]
+            session_policy = json.dumps(policy, separators=(',', ':'))
+            if learner_role_arn:
+                session = sts.assume_role(RoleArn=learner_role_arn, RoleSessionName=session_name,
+                                          DurationSeconds=900, Policy=session_policy)
+            else:
+                session = sts.get_federation_token(Name=session_name, DurationSeconds=900, Policy=session_policy)
+            credentials = session['Credentials']
             return {'provider_mode': 'aws', 'region': region, 'current_job_id': job,
                 'binding': {'knowledgeBaseId': binding['knowledge_base_id'], 'dataSourceId': binding['data_source_id'],
                             'ingestionJobId': binding['provider_ingestion_job_id']},

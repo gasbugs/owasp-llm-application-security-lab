@@ -15,6 +15,7 @@ from pathlib import Path
 import shutil
 
 from selenium import webdriver
+from selenium.common.exceptions import StaleElementReferenceException
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
@@ -94,6 +95,9 @@ def main():
     targets = sys.argv[1:] or list(ORDER)
     with webdriver.Chrome(options=options) as driver:
         driver.get(BASE)
+        # The initial bootstrap returns to Home before loading completion records.
+        wait_for(driver, lambda d: "현재 실행본에서 검증된 완료 수" in
+                 d.find_element(By.ID, "home-progress-note").get_attribute("textContent"), 60)
         for problem in targets:
             if problem not in ORDER:
                 raise ValueError(problem)
@@ -112,7 +116,9 @@ def main():
                     "완료 여부" in d.find_element(By.ID, "resource-operation-label").get_attribute("textContent") else None, 900)
                 print(f"RESOURCE {problem}: {operation}", flush=True)
                 if "준비 완료" not in operation:
-                    raise AssertionError(f"{problem}: AWS resource preparation failed")
+                    count = driver.find_element(By.ID, "resource-operation-count").get_attribute("textContent")
+                    detail = driver.find_element(By.ID, "resource-operation-detail").get_attribute("textContent")
+                    raise AssertionError(f"{problem}: AWS resource preparation failed at {count}: {detail}")
                 wait_for_resource_ready(driver, problem)
             if problem in {"P02", "P03", "P04"} and os.environ.get("GUIDED_UI_DIRECT_ONLY") == "1":
                 if problem in {"P03", "P04"}:
@@ -130,20 +136,45 @@ def main():
                 driver.execute_script("arguments[0].scrollIntoView({block:'center'}); arguments[0].click()", card)
                 if problem in block_submission.BLOCKS:
                     slot = block_submission.BLOCKS[problem][block_id][0]
-                    row = board.find_element(By.CSS_SELECTOR, f'.block-lab-row[data-block="{block_id}"]')
-                    selects = row.find_elements(By.CSS_SELECTOR, "select.block-lab-slot-select")
-                    if selects:
-                        Select(selects[0]).select_by_value(slot)
-            selected = [x.get_attribute("data-block") for x in board.find_elements(By.CSS_SELECTOR, ".block-lab-row")]
-            assert set(selected) == set(ORDER[problem]), (problem, selected)
-            button = next(x for x in board.find_elements(By.TAG_NAME, "button") if x.text == "조립한 정답 제출")
-            driver.execute_script("arguments[0].click()", button)
-            wait_for(driver, lambda d: not button.get_attribute("disabled") or "제출 실패:" in board.find_element(By.CSS_SELECTOR, ".block-lab-status").text)
-            status = board.find_element(By.CSS_SELECTOR, ".block-lab-status").text
-            if "제출 실패:" in status:
-                raise AssertionError(f"{problem}: {status}")
+                    row_selector = f'.block-lab-row[data-block="{block_id}"]'
+
+                    def select_slot(_driver):
+                        # The fetched template may redraw the selected rows while we locate the control.
+                        try:
+                            row = board.find_element(By.CSS_SELECTOR, row_selector)
+                            selects = row.find_elements(By.CSS_SELECTOR, "select.block-lab-slot-select")
+                            if selects:
+                                Select(selects[0]).select_by_value(slot)
+                        except StaleElementReferenceException:
+                            return False
+                        return True
+
+                    wait_for(driver, select_slot, 15)
+            selected, submitted, initial_status = driver.execute_script("""
+                const board = arguments[0];
+                const selected = [...board.querySelectorAll(".block-lab-row")].map(row => row.dataset.block);
+                const expected = arguments[1];
+                const button = [...board.querySelectorAll("button")]
+                    .find(button => button.textContent.trim() === "조립한 정답 제출");
+                const ready = selected.length === expected.length &&
+                    expected.every(block => selected.includes(block)) && button && !button.disabled;
+                const status = board.querySelector(".block-lab-status").textContent.trim();
+                if (ready) button.click();
+                return [selected, Boolean(ready), status];
+            """, board, ORDER[problem])
+            assert submitted, (problem, selected)
+
             grade = "tutorial-grade-tab" if problem == "P00" else "p01-grade-tab" if problem == "P01" else "h23-grade-tab"
-            wait_for(driver, lambda d: d.find_element(By.ID, grade).get_attribute("aria-selected") == "true", 30)
+
+            def submission_result(browser):
+                if browser.find_element(By.ID, grade).get_attribute("aria-selected") == "true":
+                    return True
+                status = board.find_element(By.CSS_SELECTOR, ".block-lab-status").text
+                if (problem == "P00" and status and status != initial_status) or "제출 실패:" in status:
+                    raise AssertionError(f"{problem}: {status}")
+                return False
+
+            wait_for(driver, submission_result)
             if problem != "P00":
                 outcome = wait_for(driver, lambda d: d.find_element(By.ID, "request-status").get_attribute("textContent") if
                     any(word in d.find_element(By.ID, "request-status").get_attribute("textContent") for word in ("응답을 받았습니다", "응답 오류")) else None, 180)

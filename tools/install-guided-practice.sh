@@ -103,6 +103,8 @@ if [[ ! -f "$ENV_FILE" ]]; then
   {
     if [[ "$ec2" == false ]]; then
       printf 'AWS_PROFILE=default\n'
+    elif [[ -n "${GUIDED_LDL_LEARNER_ROLE_ARN:-}" ]]; then
+      printf 'GUIDED_LDL_LEARNER_ROLE_ARN=%s\n' "$GUIDED_LDL_LEARNER_ROLE_ARN"
     fi
     printf 'LOCAL_UID=%s\n' "$(id -u)"
     printf 'LOCAL_GID=%s\n' "$(id -g)"

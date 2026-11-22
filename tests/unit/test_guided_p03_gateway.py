@@ -34,10 +34,10 @@ class GatewayTests(unittest.TestCase):
         self.client_factory = self.sdk.start()
         self.addCleanup(self.sdk.stop)
 
-    def client(self, mode, provision_token=None):
+    def client(self, mode, provision_token=None, learner_role_arn=None):
         client = TestClient(gateway.configured_app(self.database, provider_mode=mode,
                             control_token="p03-control", verifier_token="gateway-reader", region="us-east-1",
-                            provision_token=provision_token))
+                            provision_token=provision_token, learner_role_arn=learner_role_arn))
         self.addCleanup(client.close)
         return client
 
@@ -167,6 +167,34 @@ class GatewayTests(unittest.TestCase):
                                    json={"operation_id": self.operation})
         self.assertEqual(response.status_code, 200)
         prepare.assert_called_once_with(self.database, self.operation, "000000000000")
+
+    def test_learner_role_session_is_restricted_to_registered_knowledge_base(self):
+        role = "arn:aws:iam::000000000000:role/ldl-learner-fixture"
+        self.prepared()
+        sts = Mock()
+        sts.get_caller_identity.return_value = {"Account": "000000000000"}
+        sts.assume_role.return_value = {"Credentials": {
+            "AccessKeyId": "fixture-key", "SecretAccessKey": "fixture-secret", "SessionToken": "fixture-session",
+        }}
+        self.client_factory.side_effect = lambda name, **kwargs: {"sts": sts}[name]
+        client, mapping = self.client("aws", learner_role_arn=role), self.mapping()
+        self.assertEqual(client.post("/suites", headers=self.control, json=mapping).status_code, 200)
+        grant = self.register(client, mapping).json()
+        result = client.post("/native-credentials", headers={"Authorization": "Bearer " + grant["capability"]},
+                             json={"suite_id": mapping["suite_id"], "execution_id": grant["execution_id"]})
+
+        self.assertEqual(result.status_code, 200, result.text)
+        arguments = sts.assume_role.call_args.kwargs
+        self.assertEqual(arguments["RoleArn"], role)
+        self.assertEqual(arguments["RoleSessionName"], "p03-" + grant["execution_id"][:24])
+        self.assertEqual(arguments["DurationSeconds"], 900)
+        self.assertEqual(json.loads(arguments["Policy"])["Statement"], [{
+            "Effect": "Allow",
+            "Action": ["bedrock:GetIngestionJob", "bedrock:Retrieve"],
+            "Resource": "arn:aws:bedrock:us-east-1:000000000000:knowledge-base/KB12345678",
+        }])
+        sts.get_federation_token.assert_not_called()
+        sts.close.assert_called_once()
 
     def test_native_adapter_uses_bound_sdk_ids_and_single_attempt_clients(self):
         with patch.object(sdk_fixture.boto3, "client", sdk_client):

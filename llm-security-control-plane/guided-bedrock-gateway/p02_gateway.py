@@ -9,7 +9,8 @@ from p02_provider import DocumentProvider
 from p02_resources import connection_evidence
 
 
-def configured_app(state_loader, database_path, *, provider_mode, control_token, verifier_token, region):
+def configured_app(state_loader, database_path, *, provider_mode, control_token, verifier_token, region,
+                   learner_role_arn=None):
     if provider_mode not in {"aws", "contract"}:
         raise ValueError("explicit P02 provider mode required")
     ledger = DocumentLedger(database_path)
@@ -49,8 +50,14 @@ def configured_app(state_loader, database_path, *, provider_mode, control_token,
             config = Config(connect_timeout=5, read_timeout=20, retries={"total_max_attempts": 1})
             sts = boto3.client("sts", region_name=region, config=config)
             try:
-                result = sts.get_federation_token(Name="p02-" + execution_id[:24],
-                    DurationSeconds=900, Policy=json.dumps(policy, separators=(",", ":")))
+                session_name = "p02-" + execution_id[:24]
+                session_policy = json.dumps(policy, separators=(",", ":"))
+                if learner_role_arn:
+                    result = sts.assume_role(RoleArn=learner_role_arn, RoleSessionName=session_name,
+                                             DurationSeconds=900, Policy=session_policy)
+                else:
+                    result = sts.get_federation_token(Name=session_name, DurationSeconds=900,
+                                                      Policy=session_policy)
             finally:
                 sts.close()
             credentials = result["Credentials"]

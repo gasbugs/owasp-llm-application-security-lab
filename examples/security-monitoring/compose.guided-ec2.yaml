@@ -57,6 +57,7 @@ services:
   guided-bedrock-gateway:
     environment:
       AWS_EC2_METADATA_DISABLED: "false"
+      GUIDED_LDL_LEARNER_ROLE_ARN: "${GUIDED_LDL_LEARNER_ROLE_ARN:-}"
       AWS_PROFILE: !reset null
       AWS_SHARED_CREDENTIALS_FILE: !reset null
       AWS_CONFIG_FILE: !reset null
