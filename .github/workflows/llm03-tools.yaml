@@ -1,4 +1,4 @@
-name: Build and Push LLM03 Tools Image
+name: Build and Push LAL llama.cpp Tools Image
 
 on:
   pull_request:
@@ -19,7 +19,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  IMAGE: ghcr.io/gasbugs/owasp-llm-llm03-tools
+  IMAGE: ghcr.io/gasbugs/lal-llama-cpp-tools
   SHA_TAG: sha-${{ github.sha }}
 
 jobs:
@@ -59,7 +59,7 @@ jobs:
           GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          repository="gasbugs/owasp-llm-llm03-tools"
+          repository="${IMAGE#ghcr.io/}"
           token="$(curl -fsS -u "${GITHUB_ACTOR}:${GHCR_TOKEN}" \
             --get 'https://ghcr.io/token' \
             --data-urlencode 'service=ghcr.io' \
@@ -74,7 +74,7 @@ jobs:
             exit 1
           }
 
-      - name: Build and push immutable LLM03 tools image
+      - name: Build and push immutable LAL tools image
         if: github.event_name != 'pull_request'
         uses: docker/build-push-action@v7
         with:

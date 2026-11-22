@@ -13,6 +13,7 @@ class Llm03ToolsImageTests(unittest.TestCase):
             "635cdd5fcc5bdeb8ec2e108bb2a40acf62d9039b",
             dockerfile,
         )
+        self.assertIn('org.opencontainers.image.title="lal-llama-cpp-tools"', dockerfile)
         self.assertIn("org.opencontainers.image.licenses=\"MIT\"", dockerfile)
         self.assertIn(
             "COPY --from=build /src/llama.cpp/LICENSE "
@@ -23,7 +24,8 @@ class Llm03ToolsImageTests(unittest.TestCase):
     def test_workflow_publishes_an_immutable_amd64_image(self):
         workflow = (ROOT / ".github/workflows/llm03-tools.yaml").read_text()
 
-        self.assertIn("ghcr.io/gasbugs/owasp-llm-llm03-tools", workflow)
+        self.assertIn("IMAGE: ghcr.io/gasbugs/lal-llama-cpp-tools", workflow)
+        self.assertIn('repository="${IMAGE#ghcr.io/}"', workflow)
         self.assertIn("SHA_TAG: sha-${{ github.sha }}", workflow)
         self.assertIn("file: ./examples/llm03/Dockerfile.llama-cpp", workflow)
         self.assertIn("platforms: linux/amd64", workflow)
