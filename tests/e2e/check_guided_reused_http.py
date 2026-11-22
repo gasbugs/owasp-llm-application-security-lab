@@ -102,8 +102,8 @@ def main():
         for name, service in model["services"].items():
             service["container_name"] = project + "-" + name
             if "build" in service:
-                original_image = service["image"].split("/")[-1].split(":")[0]
-                service["image"] = "localhost/" + project + "-" + original_image + ":test"
+                # Compose exports each build target separately, even when services share a production image.
+                service["image"] = f"localhost/{project}-{name}:test"
                 service["build"]["context"] = str(context)
             service.pop("ports", None)
             service["restart"] = "no"
