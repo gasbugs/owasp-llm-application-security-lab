@@ -57,7 +57,7 @@ fi
 : "${RUN_DEADLINE_MINUTES:=120}"
 : "${IMAGE_REGISTRY:=ghcr.io}"
 : "${IMAGE_NAMESPACE:=gasbugs}"
-SETUP_GIT_URL="https://github.com/gasbugs/owasp-llm-lab-setup-guide.git"
+SETUP_GIT_URL="https://github.com/gasbugs/lal.git"
 LLM09_FIXTURE_PACKAGE="owasp-llm-lab-nonexistent-candidate-20260711"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -1022,7 +1022,7 @@ TF_VARS=(
   "-var=aws_profile=$AWS_PROFILE"
   "-var=course_id=$COURSE_ID"
   "-var=enable_user_data_bootstrap=true"
-  "-var=lab_setup_repo_raw_url=https://raw.githubusercontent.com/gasbugs/owasp-llm-lab-setup-guide/$SETUP_COMMIT"
+  "-var=lab_setup_repo_raw_url=https://raw.githubusercontent.com/gasbugs/lal/$SETUP_COMMIT"
   "-var=lab_image_namespace=$IMAGE_NAMESPACE"
   "-var=lab_image_tag=$IMAGE_TAG"
   "-var=allowed_ingress_cidr=203.0.113.10/32"

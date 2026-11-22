@@ -34,7 +34,7 @@ ARG VCS_REF=unknown
 ARG APP_VERSION=dev
 LABEL org.opencontainers.image.version="$APP_VERSION"
 ENV APP_VERSION=$APP_VERSION
-LABEL org.opencontainers.image.source="https://github.com/gasbugs/owasp-llm-lab-setup-guide"
+LABEL org.opencontainers.image.source="https://github.com/gasbugs/lal"
 LABEL org.opencontainers.image.revision="$VCS_REF"
 WORKDIR /app
 

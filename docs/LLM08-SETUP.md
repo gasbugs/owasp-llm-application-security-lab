@@ -242,7 +242,7 @@ if [ -e "$SETUP_DIR" ] && [ ! -d "$SETUP_DIR/.git" ]; then
   exit 1
 fi
 if [ ! -d "$SETUP_DIR/.git" ]; then
-  git clone https://github.com/gasbugs/owasp-llm-lab-setup-guide.git \
+  git clone https://github.com/gasbugs/lal.git \
     "$SETUP_DIR"
 fi
 git -C "$SETUP_DIR" fetch origin main
@@ -256,7 +256,7 @@ sudo env \
   IMAGE_NAMESPACE=gasbugs \
   IMAGE_TAG="$IMAGE_TAG" \
   REFRESH_IMAGES=true \
-  LAB_SETUP_REPO_RAW_URL="https://raw.githubusercontent.com/gasbugs/owasp-llm-lab-setup-guide/$SETUP_COMMIT" \
+  LAB_SETUP_REPO_RAW_URL="https://raw.githubusercontent.com/gasbugs/lal/$SETUP_COMMIT" \
   bash "$SETUP_DIR/infrastructure/scripts/student/install-lab.sh"
 ```
 

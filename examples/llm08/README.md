@@ -26,7 +26,7 @@ esac
 }
 SETUP_DIR="$HOME/owasp-llm-lab-setup-guide-$SETUP_COMMIT"
 if [ ! -d "$SETUP_DIR/.git" ]; then
-  git clone https://github.com/gasbugs/owasp-llm-lab-setup-guide.git \
+  git clone https://github.com/gasbugs/lal.git \
     "$SETUP_DIR"
 fi
 git -C "$SETUP_DIR" fetch origin main

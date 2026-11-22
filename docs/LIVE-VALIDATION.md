@@ -85,7 +85,7 @@ Terraform과 설치 절차는 [`STUDENT-QUICKSTART.md`](STUDENT-QUICKSTART.md)�
 ```bash
 terraform -chdir=infrastructure/terraform apply -auto-approve \
   -var='enable_user_data_bootstrap=true' \
-  -var="lab_setup_repo_raw_url=https://raw.githubusercontent.com/gasbugs/owasp-llm-lab-setup-guide/$SETUP_COMMIT" \
+  -var="lab_setup_repo_raw_url=https://raw.githubusercontent.com/gasbugs/lal/$SETUP_COMMIT" \
   -var='lab_image_namespace=gasbugs' \
   -var="lab_image_tag=$IMAGE_TAG"
 ```
@@ -106,7 +106,7 @@ command -v git >/dev/null || {
 
 cd /home/ubuntu
 if [ ! -d owasp-llm-lab-setup-guide/.git ]; then
-  git clone https://github.com/gasbugs/owasp-llm-lab-setup-guide.git
+  git clone https://github.com/gasbugs/lal.git owasp-llm-lab-setup-guide
 fi
 cd owasp-llm-lab-setup-guide
 git fetch origin main
@@ -121,7 +121,7 @@ sudo env \
   IMAGE_NAMESPACE=gasbugs \
   IMAGE_TAG="$IMAGE_TAG" \
   REFRESH_IMAGES=true \
-  LAB_SETUP_REPO_RAW_URL="https://raw.githubusercontent.com/gasbugs/owasp-llm-lab-setup-guide/$SETUP_COMMIT" \
+  LAB_SETUP_REPO_RAW_URL="https://raw.githubusercontent.com/gasbugs/lal/$SETUP_COMMIT" \
   bash infrastructure/scripts/student/install-lab.sh
 ```
 

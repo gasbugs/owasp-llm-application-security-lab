@@ -363,7 +363,7 @@ echo -e "${BOLD}${BLUE}=============================="
 echo -e " 5. Git 설치 및 실습 저장소 clone"
 echo -e "==============================${NC}"
 
-REPO_URL="https://github.com/gasbugs/owasp-llm-lab-setup-guide.git"
+REPO_URL="https://github.com/gasbugs/lal.git"
 REPO_DIR="$HOME/owasp-llm-lab-setup-guide"
 GIT_SUCCESS=false
 

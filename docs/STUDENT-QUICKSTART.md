@@ -16,7 +16,7 @@ Ubuntu PC에서 위 도구를 한 번에 준비하려면 다음 선택적 스크
 `install-lab.sh`가 Docker과 단일 Compose 파일로 구성합니다.
 
 ```bash
-curl -fsSLO https://raw.githubusercontent.com/gasbugs/owasp-llm-lab-setup-guide/main/infrastructure/scripts/student/setup-workstation-ubuntu.sh
+curl -fsSLO https://raw.githubusercontent.com/gasbugs/lal/main/infrastructure/scripts/student/setup-workstation-ubuntu.sh
 bash setup-workstation-ubuntu.sh
 cd ~/owasp-llm-lab-setup-guide
 ```
@@ -112,7 +112,7 @@ aws ssm start-session --profile owasp-llm --region us-east-1 \
 SSM 세션 안에서 아래 명령을 실행합니다. Terraform output의 `manual_install_command`에 같은 명령이 표시됩니다.
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/gasbugs/owasp-llm-lab-setup-guide/main/infrastructure/scripts/student/install-lab.sh | sudo bash
+curl -fsSL https://raw.githubusercontent.com/gasbugs/lal/main/infrastructure/scripts/student/install-lab.sh | sudo bash
 ```
 
 설치 중 수행되는 작업은 다음과 같습니다.
@@ -247,14 +247,14 @@ and reset policy](LAB-RESET-POLICY.md)에 정리되어 있습니다.
 않습니다.
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/gasbugs/owasp-llm-lab-setup-guide/main/infrastructure/scripts/student/cleanup-lab.sh | sudo bash
-curl -fsSL https://raw.githubusercontent.com/gasbugs/owasp-llm-lab-setup-guide/main/infrastructure/scripts/student/install-lab.sh | sudo bash
+curl -fsSL https://raw.githubusercontent.com/gasbugs/lal/main/infrastructure/scripts/student/cleanup-lab.sh | sudo bash
+curl -fsSL https://raw.githubusercontent.com/gasbugs/lal/main/infrastructure/scripts/student/install-lab.sh | sudo bash
 ```
 
 모델 캐시와 생성 파일까지 지우려면 `--purge`를 사용합니다. 이 경우 다음 설치에서 모델을 다시 받아 시간이 더 걸립니다.
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/gasbugs/owasp-llm-lab-setup-guide/main/infrastructure/scripts/student/cleanup-lab.sh | sudo bash -s -- --purge
+curl -fsSL https://raw.githubusercontent.com/gasbugs/lal/main/infrastructure/scripts/student/cleanup-lab.sh | sudo bash -s -- --purge
 ```
 
 ## 11. 매일 시작

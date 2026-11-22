@@ -87,7 +87,7 @@ class RuntimeContractTest(unittest.TestCase):
     def test_runtime_images_are_linked_to_the_public_source_repository(self) -> None:
         source_label = (
             'org.opencontainers.image.source='
-            '"https://github.com/gasbugs/owasp-llm-lab-setup-guide"'
+            '"https://github.com/gasbugs/lal"'
         )
         images = {
             "base-gpu": "docker/base-gpu/Dockerfile",

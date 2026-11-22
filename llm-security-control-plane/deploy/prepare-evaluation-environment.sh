@@ -65,7 +65,7 @@ if ! git -C "$SETUP_ROOT" diff --quiet HEAD --; then
 fi
 BEFORE_UPDATE="$(git -C "$SETUP_ROOT" rev-parse HEAD)"
 log '공식 setup main의 최신 버전을 확인합니다. 컨테이너·상태·AWS 자원은 아직 변경하지 않습니다.'
-if ! git -C "$SETUP_ROOT" fetch --no-tags https://github.com/gasbugs/owasp-llm-lab-setup-guide.git main; then
+if ! git -C "$SETUP_ROOT" fetch --no-tags https://github.com/gasbugs/lal.git main; then
   echo '[ERR] 최신 버전 확인 실패. 이전 코드로 설치하지 않고 중단합니다.' >&2; exit 1;
 fi
 if ! git -C "$SETUP_ROOT" merge-base --is-ancestor HEAD FETCH_HEAD || \

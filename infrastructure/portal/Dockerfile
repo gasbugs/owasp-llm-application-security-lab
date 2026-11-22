@@ -5,7 +5,7 @@ ARG APP_VERSION=dev
 LABEL org.opencontainers.image.version="$APP_VERSION"
 ENV APP_VERSION=$APP_VERSION
 
-LABEL org.opencontainers.image.source="https://github.com/gasbugs/owasp-llm-lab-setup-guide" \
+LABEL org.opencontainers.image.source="https://github.com/gasbugs/lal" \
       org.opencontainers.image.revision="$VCS_REF" \
       org.opencontainers.image.title="OWASP LLM Lab Portal" \
       org.opencontainers.image.licenses="PolyForm-Noncommercial-1.0.0"

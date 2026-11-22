@@ -3,7 +3,7 @@
 #
 # 실행 위치: Terraform이 만든 EC2 인스턴스 안.
 # 권장 실행:
-#   curl -fsSL https://raw.githubusercontent.com/gasbugs/owasp-llm-lab-setup-guide/main/infrastructure/scripts/student/install-lab.sh | sudo bash
+#   curl -fsSL https://raw.githubusercontent.com/gasbugs/lal/main/infrastructure/scripts/student/install-lab.sh | sudo bash
 #
 # 같은 스크립트는 선택적 user-data 자동 설치에서도 재사용된다.
 
@@ -11,14 +11,14 @@ set -euo pipefail
 
 if [ "$(id -u)" -ne 0 ]; then
   echo "이 스크립트는 root 권한이 필요합니다. 다음처럼 실행하세요:"
-  echo "  curl -fsSL https://raw.githubusercontent.com/gasbugs/owasp-llm-lab-setup-guide/main/infrastructure/scripts/student/install-lab.sh | sudo bash"
+  echo "  curl -fsSL https://raw.githubusercontent.com/gasbugs/lal/main/infrastructure/scripts/student/install-lab.sh | sudo bash"
   exit 1
 fi
 
 LOG_FILE="${LAB_INSTALL_LOG:-/var/log/owasp-llm-lab-install.log}"
 exec > >(tee -a "$LOG_FILE") 2>&1
 
-RAW_URL="${LAB_SETUP_REPO_RAW_URL:-https://raw.githubusercontent.com/gasbugs/owasp-llm-lab-setup-guide/main}"
+RAW_URL="${LAB_SETUP_REPO_RAW_URL:-https://raw.githubusercontent.com/gasbugs/lal/main}"
 SCRIPT_VERSION="0.2.13"
 DOCKER_ENGINE_RELEASE="${DOCKER_ENGINE_RELEASE:-29.7.2}"
 DOCKER_COMPOSE_RELEASE="${DOCKER_COMPOSE_RELEASE:-5.5.0}"
@@ -714,7 +714,7 @@ OWASP LLM Lab 설치가 완료되었습니다.
 LLM08 추가 준비:
   - embedding model: $OLLAMA_EMBED_MODEL
   - analysis Python: /home/ubuntu/work/llm08-analysis-venv/bin/python
-  - setup guide: https://github.com/gasbugs/owasp-llm-lab-setup-guide/blob/main/docs/LLM08-SETUP.md
+  - setup guide: https://github.com/gasbugs/lal/blob/main/docs/LLM08-SETUP.md
   - learner app scaffold는 EC2에서 setup 저장소를 clone/pull한 뒤 복사합니다.
 
 브라우저 접속 URL:

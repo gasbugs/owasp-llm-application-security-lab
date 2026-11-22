@@ -92,7 +92,7 @@ DVLA의 Ollama 모델은 `langchain-ollama==0.3.10`·`ollama==0.5.3`의 native c
 git fetch origin main
 SETUP_COMMIT=$(git rev-parse origin/main)
 sudo env IMAGE_NAMESPACE=gasbugs IMAGE_TAG="sha-$SETUP_COMMIT" \
-  LAB_SETUP_REPO_RAW_URL="https://raw.githubusercontent.com/gasbugs/owasp-llm-lab-setup-guide/$SETUP_COMMIT" \
+  LAB_SETUP_REPO_RAW_URL="https://raw.githubusercontent.com/gasbugs/lal/$SETUP_COMMIT" \
   bash infrastructure/scripts/student/install-lab.sh
 
 sudo -u ubuntu docker ps --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'

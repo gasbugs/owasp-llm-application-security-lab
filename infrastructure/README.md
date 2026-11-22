@@ -41,7 +41,7 @@ terraform apply -auto-approve
 Terraform 적용 후 EC2 안에서 설치를 직접 수행한다.
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/gasbugs/owasp-llm-lab-setup-guide/main/infrastructure/scripts/student/install-lab.sh | sudo bash
+curl -fsSL https://raw.githubusercontent.com/gasbugs/lal/main/infrastructure/scripts/student/install-lab.sh | sudo bash
 ```
 
 강사 운영상 자동 설치가 필요할 때만 `terraform.tfvars`의 `enable_user_data_bootstrap`을 아래처럼 바꾼다. AMI·commit 고정과 이전 변수 제거 방법은 [Terraform 고급 설정](../docs/TERRAFORM-ADVANCED-OPTIONS.md)에 모아 둔다.

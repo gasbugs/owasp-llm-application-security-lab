@@ -36,7 +36,7 @@ variable "enable_user_data_bootstrap" {
 variable "lab_setup_repo_raw_url" {
   description = "install-lab.sh와 fake-registry/server.py를 내려받을 GitHub raw URL prefix. fork나 특정 브랜치를 쓰는 경우 override한다."
   type        = string
-  default     = "https://raw.githubusercontent.com/gasbugs/owasp-llm-lab-setup-guide/main"
+  default     = "https://raw.githubusercontent.com/gasbugs/lal/main"
   validation {
     condition     = can(regex("^https://", var.lab_setup_repo_raw_url))
     error_message = "lab_setup_repo_raw_url은 https:// 로 시작해야 합니다."
