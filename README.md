@@ -1,160 +1,37 @@
-# OWASP LLM Lab Setup Guide
+# LAL · OWASP LLM Application Security Lab
 
-OWASP Top 10 for LLM 실습의 AWS 인프라, 컨테이너 런타임, 설치 스크립트와 강사용 실측 검증을 함께 관리하는 공개 설정 저장소입니다. EC2에 무엇을 설치하고 어떤 이미지·포트·health 계약을 검증하는지는 이 저장소를 단일 기준으로 삼습니다.
+English · [한국어](README.ko.md)
 
-> WARNING: 이 저장소의 일부 컨테이너는 교육 목적으로 의도적으로 취약하게 만든 실습 앱입니다. 허가된 개인 실습 계정과 강의 범위 안에서만 사용하세요.
+LAL maintains the infrastructure, container runtime, installation scripts, and verification tools used in the OWASP Top 10 for LLM Applications labs. The repository supports the AWS GPU-based OWASP practice environment, Bedrock-based guardrails and observability, and the mission services used by the LLM Defense Lab (LDL) Control Center.
 
-## 무엇이 포함되어 있나요
+The [course repository](https://github.com/gasbugs/owasp-top-10-for-llm) contains the learner-facing notes. The [LDL Terraform repository](https://github.com/gasbugs/ldl) deploys the dedicated LDL EC2 instance and installs the runtime from a pinned commit of this repository.
 
-| 경로 | 용도 |
-|---|---|
-| `docs/STUDENT-QUICKSTART.md` | 수강생 환경 구축 절차 |
-| `docs/TERRAFORM-ADVANCED-OPTIONS.md` | 강사용 AMI·bootstrap·commit 고정 override와 이전 변수 제거 안내 |
-| `docs/LAB-RESET-POLICY.md` | 실습 상태 저장 위치와 allowlist 기반 최소 복원 명령 |
-| `docs/LLM08-SETUP.md` | LLM08 embedding runtime·분석 venv·학습자 미니 앱의 신규/기존 EC2 설치와 종료 절차 |
-| `docs/GUARDRAILS-SETUP.md` | Microsoft Presidio·NeMo Guardrails Docker 이미지 빌드와 실측 검증 |
-| `bedrock-api-lab/` | 기존 GPU 환경과 독립된 Nova Lite·Titan Embeddings·Knowledge Base API 실습 |
-| `docs/ARCHITECTURE.md` | AWS VM, Terraform, user-data, 컨테이너 배포 구조 |
-| `docs/INSTRUCTOR-IMAGE-BUILD.md` | 강사가 컨테이너 이미지를 빌드하고 공개 GHCR에 push하는 절차 |
-| `docs/LIVE-VALIDATION.md` | commit 태그와 resolved digest로 EC2 런타임을 설치하고 증거를 회수하는 강사용 절차 |
-| `docs/TROUBLESHOOTING.md` | quota, SSM, Terraform, Docker, Ollama 문제 해결 |
-| `infrastructure/terraform/` | VPC, 보안 그룹, EC2 GPU 인스턴스, IAM |
-| `infrastructure/terraform/user-data.sh.tpl` | 선택적 자동 설치용 user-data 래퍼. 기본값에서는 비활성화 |
-| `infrastructure/scripts/student/` | 수강생용 preflight, 수동 설치/클린업, instance-id, start, stop, sync 헬퍼 |
-| `infrastructure/packer/` | 선택 사항: 강사용 Golden AMI 빌드 |
-| `infrastructure/compose/compose.yaml` | 포트·이미지·환경변수·볼륨·GPU·의존관계를 한눈에 보는 단일 서비스 배포 정의 |
-| `docker/` | 이미지 Dockerfile·build helper·취약 앱 소스 |
-| `examples/llmgoat-local-build/` | 기존 배포를 바꾸지 않고 LLMGoat를 로컬 Build·배포하는 선택형 Compose 예제 |
-| `tests/unit/` | 파서·UI 계약·공개 저장소 PII/secret 회귀 검사 |
-| `tests/e2e/` | 공개 강사용 런타임 실측 검증. 수강생 과제나 채점 기준이 아님 |
+> Some lab applications are intentionally vulnerable. Run them in an authorized, isolated practice environment.
 
-## 빠른 시작
+## Choose a setup path
 
-수강생은 아래 문서부터 보면 됩니다.
+| Environment | Where to start |
+| --- | --- |
+| AWS GPU lab for OWASP Top 10 practice | [Student quickstart](docs/STUDENT-QUICKSTART.md) |
+| Amazon Bedrock API practice | [Bedrock API lab](bedrock-api-lab/) |
+| NeMo Guardrails and Presidio on WSL | [Guardrails setup](docs/GUARDRAILS-SETUP.md) |
+| LDL mission environment on dedicated AWS EC2 | [LDL deployment](https://github.com/gasbugs/ldl) |
 
-[docs/STUDENT-QUICKSTART.md](docs/STUDENT-QUICKSTART.md)
+For the GPU path, Terraform provisions a single on-demand GPU instance in the learner's AWS account. The quickstart covers AWS account checks, the learner's public IPv4 allowlist, installation, and daily start and stop procedures. The Bedrock and WSL paths use their own setup instructions.
 
-Ubuntu 로컬 PC의 선택적 도구 설치는
-[`infrastructure/scripts/student/setup-workstation-ubuntu.sh`](infrastructure/scripts/student/setup-workstation-ubuntu.sh)를
-사용합니다. 이 스크립트는 로컬 워크스테이션만 준비하며 EC2의 Docker 실습
-런타임 설치를 대신하지 않습니다.
+## Repository layout
 
-LLM08에서는 일반 셋업 뒤 [docs/LLM08-SETUP.md](docs/LLM08-SETUP.md)의 `bge-m3:latest`와 임베딩 API 검증, 미니 앱 실행·공인 주소 접속·증거 보존을 추가로 수행합니다. 강사·콘텐츠 배포자가 먼저 publish gate를 통과해 40자리 setup commit을 공지하며, 수강생은 로컬 PC에 Docker을 추가 설치하지 않습니다. LLM08 변경이 로컬 워킹트리에만 있거나 같은 commit의 이미지가 아직 공개 GHCR에 없으면 gate에서 중단하며, 현재 원격 `main`에 이미 배포됐다고 가정하지 않습니다.
+| Path | Contents |
+| --- | --- |
+| [infrastructure/terraform/](infrastructure/terraform/) | AWS infrastructure for the GPU lab |
+| [infrastructure/scripts/student/](infrastructure/scripts/student/) | Installation, preflight, start, stop, and cleanup commands |
+| [infrastructure/compose/compose.yaml](infrastructure/compose/compose.yaml) | Services and runtime configuration for the GPU lab |
+| [llm-security-control-plane/](llm-security-control-plane/) | Bedrock gateways, guardrails, and LDL mission services |
+| [tools/install-guided-practice.sh](tools/install-guided-practice.sh) | LDL runtime installer |
+| [tests/](tests/) | Unit, browser, and end-to-end verification |
 
-WSL 가드레일 실습은 [docs/GUARDRAILS-SETUP.md](docs/GUARDRAILS-SETUP.md)를 따릅니다. GPU 없는 WSL에서 Presidio·NeMo를 단계별로 조립하고 Bedrock Gateway를 통해 Nova Lite를 호출합니다.
+For deployment details, see the [architecture guide](docs/ARCHITECTURE.md), [advanced Terraform options](docs/TERRAFORM-ADVANCED-OPTIONS.md), and [troubleshooting guide](docs/TROUBLESHOOTING.md). For release and runtime verification, see [image builds](docs/INSTRUCTOR-IMAGE-BUILD.md) and [live validation](docs/LIVE-VALIDATION.md).
 
-기존 통합 배포와 분리해 LLMGoat만 직접 Build하려면
-[examples/llmgoat-local-build/README.md](examples/llmgoat-local-build/README.md)를
-따릅니다. 고정한 upstream image에 같은 버전의 전체 소스와 GPL 원문을 포함하고,
-`docker compose build` 뒤 `docker compose up -d`로 별도 15000번 포트에
-배포합니다. Gemma는 Ollama에 중복 설치하지 않고 LLMGoat의 원래 llama-cpp
-경로에서 전용 volume으로 관리합니다.
+## License
 
-가장 짧은 흐름은 다음과 같습니다.
-
-```bash
-git clone https://github.com/gasbugs/owasp-llm-lab-setup-guide.git
-cd owasp-llm-lab-setup-guide
-
-AWS_PROFILE=owasp-llm AWS_REGION=us-east-1 \
-  bash infrastructure/scripts/student/preflight-local.sh
-
-cd infrastructure/terraform
-cp terraform.tfvars.example terraform.tfvars
-# terraform.tfvars에서 자동 설치 여부와 접속 IP를 확인
-
-terraform init
-terraform plan
-terraform apply -auto-approve
-```
-
-매일 시작과 종료는 저장소 루트에서 실행합니다.
-
-```bash
-AWS_PROFILE=owasp-llm AWS_REGION=us-east-1 \
-  bash infrastructure/scripts/student/start-lab.sh
-
-AWS_PROFILE=owasp-llm AWS_REGION=us-east-1 \
-  bash infrastructure/scripts/student/stop-lab.sh
-```
-
-## 기본 배포 방식
-
-1. Terraform이 기존 검증 계열인 `Deep Learning OSS Nvidia Driver AMI GPU PyTorch 2.11 (Ubuntu 24.04)`의 최신 AMI를 조회합니다.
-2. Terraform이 현재 AWS 계정에 EC2 `g6.xlarge` 1대를 만듭니다.
-3. 기본값에서는 user-data 자동 설치가 실행되지 않습니다.
-4. 수강생이 SSM으로 EC2에 접속해 `install-lab.sh`를 직접 실행합니다.
-5. 설치 스크립트가 Docker을 설치하고 프로젝트 image를 pull합니다. LLMGoat는
-   setup의 고정 Containerfile과 전체 GPL 소스를 내려받아 EC2에서 직접 Build합니다.
-6. `lab-ollama`, `lab-portal`, `lab-prompt-rag`, `lab-llm04-rag`, `lab-data-rag`, `lab-output-rag`, `lab-knowledge-rag`, `lab-resource-rag`, `lab-vuln-agent`, `lab-llmgoat`, `lab-dvla`, `lab-fake-registry` 컨테이너를 실행합니다.
-7. 단일 Docker Compose 정의로 서비스를 실행하고 `restart: always` 정책과 `Docker daemon`로 EC2 재부팅 후 자동 복구합니다.
-
-AMI ID나 SHA를 직접 입력하는 변수는 두지 않습니다. 이름·소유자 조건에 맞는 최신 AMI 조회 결과는 새 EC2를 생성할 때 적용되며, 이미 존재하는 수강생 EC2는 EBS 작업물 보호를 위해 현재 AMI를 유지하고 자동 교체하지 않습니다.
-
-## 강사용 런타임 검증
-
-컨테이너 변경은 CI의 unit·Python compile·shell syntax·Terraform·Packer·Docker build-config·공개 저장소 위생 검사를 통과한 뒤에만 공개 GitHub Container Registry(GHCR)로 push됩니다. Workflow는 외부 registry secret 대신 내장 `GITHUB_TOKEN`의 `packages: write` 권한을 사용합니다. `sha-<40자리 Git commit>` 태그는 한 번 publish되면 workflow와 로컬 helper가 덮어쓰기를 거부하며, 모든 이미지 빌드가 끝난 경우에만 그 이미지 세트를 `latest`로 승격합니다.
-
-실측 검증에서는 `latest` 대신 검증할 커밋 태그를 지정하고, 실제 pull된 각 이미지의 resolved digest를 함께 기록하세요. 일부 upstream base image와 설치 스크립트가 이동 태그를 사용하므로 Git commit만으로 bit-for-bit 재빌드를 보장하지 않으며, 최초 publish된 digest가 최종 실행 식별자입니다.
-
-```bash
-git fetch origin main
-SETUP_COMMIT=$(git rev-parse origin/main)
-sudo env IMAGE_NAMESPACE=gasbugs IMAGE_TAG="sha-$SETUP_COMMIT" \
-  LAB_SETUP_REPO_RAW_URL="https://raw.githubusercontent.com/gasbugs/owasp-llm-lab-setup-guide/$SETUP_COMMIT" \
-  bash infrastructure/scripts/student/install-lab.sh
-
-TRIALS=5 bash tests/e2e/run-full-cycle.sh
-```
-
-full-cycle은 RAG·Agent 항목뿐 아니라 LLMGoat A01/A02/A04/A06/A08을
-loopback API로 실제 호출합니다. 각 응답은 `llmgoat/raw/requests.jsonl`에
-보존하고, A04 review poison/reset과 A08 vector import/reset은 결정적 계약으로
-반드시 통과시킵니다. 모델별 `solved` 여부는 배포 판정이 아니라 실측
-관찰값입니다. 로컬 Playwright 단계는 SSM `5000→15000` 포워드를 통해 A01
-화면의 응답 렌더링과 solved 표시 일치 여부도 확인합니다.
-
-전체 절차와 결과 경로는 [docs/LIVE-VALIDATION.md](docs/LIVE-VALIDATION.md)에 고정합니다.
-
-강사가 운영 편의상 자동 설치를 원하면 `terraform.tfvars`의 명시적인 값을 아래처럼 바꿉니다.
-
-```hcl
-enable_user_data_bootstrap = true
-```
-
-자동 설치를 켜도 내부적으로는 수강생용 `infrastructure/scripts/student/install-lab.sh`와 같은 설치 절차를 실행합니다. 이 스크립트는 LLMGoat에 대해 `docker compose build`를 먼저 실행하고, 이어 `docker compose up -d`로 전체 서비스를 시작합니다. Gemma GGUF는 별도 Ollama가 아니라 LLMGoat 전용 volume에서 재사용합니다.
-강사용 실측에서는 `lab_setup_repo_raw_url`과 `lab_image_tag`를 같은 40자리 main commit으로 고정해야 합니다. 예시는 [Terraform 고급 설정](docs/TERRAFORM-ADVANCED-OPTIONS.md)과 [LIVE-VALIDATION.md](docs/LIVE-VALIDATION.md)에 있습니다.
-
-`user_data_replace_on_change = false`이므로 이 pin은 최초 `terraform apply` 전에 설정하세요. 기존 인스턴스에서 URL이나 이미지 태그만 바꿔도 user-data가 다시 실행되거나 인스턴스가 자동 교체되지는 않습니다.
-
-## 비용 안전 원칙
-
-- `g6.xlarge`는 실행 중일 때 비용이 발생합니다.
-- `stop-lab.sh`는 기존 EC2를 중지하고 root EBS를 보존합니다. 중지 중에도 EBS 비용은 남습니다.
-- 매일 실습 종료 후 즉시 `stop-lab.sh`를 실행하세요.
-- Terraform은 자동 중지 Lambda·EventBridge를 만들지 않습니다. 실습 직후 직접 중지하고 `stopped` 상태를 확인합니다.
-- 강의 종료 후에는 보존할 작업물을 개인 GitHub repo에 push한 뒤 `terraform destroy`를 실행하세요.
-- 이 Terraform은 Budget 알람을 만들지 않으므로 실행 시간을 직접 관리합니다.
-
-웹/API는 본인 공인 IPv4 `/32`를 `allowed_ingress_cidr`에 설정한 뒤 EC2 공인 IP로 직접 접속합니다. 기본 `127.0.0.1/32`는 설정 전 외부 접근을 막는 값이므로 실습 전에 바꿉니다. SSM은 관리 셸 접속에 사용합니다. 중지·재시작 후에는 공인 IP를 다시 조회합니다.
-
-기존 ASG 기반 state에는 현재 구성을 바로 apply하지 말고 [전환 안내](docs/TERRAFORM-ADVANCED-OPTIONS.md)를 먼저 확인합니다.
-
-## 보안 원칙
-
-- 기본 `allowed_ingress_cidr = "127.0.0.1/32"`는 외부 접속을 열지 않습니다.
-- 실습 전 본인 공인 IPv4 `/32`를 입력합니다.
-- 보안 그룹은 선택한 `/32`에서 오는 모든 프로토콜과 포트를 단일 ingress 규칙으로 허용합니다.
-- `0.0.0.0/0` 또는 `::/0` 공개는 Terraform validation에서 차단됩니다.
-- Access Key, Secret, `terraform.tfvars`, `.tfstate` 파일은 절대 commit하지 마세요.
-
-## 라이선스와 주의
-
-이 저장소에서 직접 작성한 부분은 이중 라이선스로 제공합니다.
-
-- 개인 학습·연구·취미 등 비상업적 사용은 [PolyForm Noncommercial License 1.0.0](LICENSE)에 따라 무료입니다.
-- 기업의 사내 교육, 업무, 유료 교육, 컨설팅, 제품·서비스 포함 등 상업적 사용에는 [별도의 서면 상업용 라이선스](COMMERCIAL-LICENSE.md)가 필요합니다.
-
-이 정책은 현재 `LICENSE`와 `NOTICE.md`가 포함된 revision부터 적용됩니다. 과거 MIT License로 배포된 revision의 기존 권리는 취소되지 않습니다.
-
-이 저장소는 source-available이지만 상업적 사용을 제한하므로 OSI가 정의하는 Open Source Software는 아닙니다. `docker/llmgoat`, `docker/dvla`, base image, package와 model 같은 외부 구성요소에는 각각의 원래 라이선스가 적용됩니다. 자세한 적용 범위와 고지는 [NOTICE.md](NOTICE.md)와 [THIRD-PARTY-LICENSES.md](THIRD-PARTY-LICENSES.md)를 확인하세요.
+Original portions of this repository are available under the [PolyForm Noncommercial License 1.0.0](LICENSE) for noncommercial use. Commercial use requires a [separate written license](COMMERCIAL-LICENSE.md). Earlier revisions distributed under the MIT License retain their original terms. See the [licensing notice](NOTICE.md) and [third-party licenses](THIRD-PARTY-LICENSES.md) for details.
