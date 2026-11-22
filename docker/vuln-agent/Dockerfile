@@ -8,7 +8,7 @@ ARG APP_VERSION=dev
 LABEL org.opencontainers.image.version="$APP_VERSION"
 ENV APP_VERSION=$APP_VERSION
 LABEL org.opencontainers.image.title="owasp-llm-vuln-agent"
-LABEL org.opencontainers.image.source="https://github.com/gasbugs/lal"
+LABEL org.opencontainers.image.source="https://github.com/gasbugs/owasp-llm-application-security-lab"
 LABEL org.opencontainers.image.revision="$VCS_REF"
 LABEL owasp.llm.lab.warning="INTENTIONALLY VULNERABLE — DO NOT DEPLOY OUTSIDE TRAINING"
 

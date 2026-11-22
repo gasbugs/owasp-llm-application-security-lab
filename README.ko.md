@@ -2,7 +2,7 @@
 
 [English](README.md) · 한국어
 
-LAL은 OWASP Top 10 for LLM Applications를 실습하는 데 필요한 배포 코드와 실행 환경을 관리합니다. AWS GPU에서 실행하는 OWASP 실습, Amazon Bedrock 기반 가드레일·관측, LDL Control Center의 미션 서비스가 이 저장소의 런타임을 사용합니다. [교재 저장소](https://github.com/gasbugs/owasp-top-10-for-llm)는 수강생 안내를, [LDL Terraform](https://github.com/gasbugs/ldl)은 실습용 EC2 배포를 관리합니다.
+LAL은 OWASP Top 10 for LLM Applications를 실습하는 데 필요한 배포 코드와 실행 환경을 관리합니다. AWS GPU에서 실행하는 OWASP 실습, Amazon Bedrock 기반 가드레일·관측, LDL Control Center의 미션 서비스가 이 저장소의 런타임을 사용합니다. [교재 저장소](https://github.com/gasbugs/owasp-top-10-for-llm)는 수강생 안내를, [LDL Terraform](https://github.com/gasbugs/llm-defense-lab)은 실습용 EC2 배포를 관리합니다.
 
 > WARNING: 이 저장소의 일부 컨테이너는 교육 목적으로 의도적으로 취약하게 만든 실습 앱입니다. 허가된 개인 실습 계정과 강의 범위 안에서만 사용하세요.
 
@@ -55,7 +55,7 @@ WSL 가드레일 실습은 [docs/GUARDRAILS-SETUP.md](docs/GUARDRAILS-SETUP.md)�
 가장 짧은 흐름은 다음과 같습니다.
 
 ```bash
-git clone https://github.com/gasbugs/lal.git owasp-llm-lab-setup-guide
+git clone https://github.com/gasbugs/owasp-llm-application-security-lab.git owasp-llm-lab-setup-guide
 cd owasp-llm-lab-setup-guide
 
 AWS_PROFILE=owasp-llm AWS_REGION=us-east-1 \
@@ -103,7 +103,7 @@ AMI ID나 SHA를 직접 입력하는 변수는 두지 않습니다. 이름·소�
 git fetch origin main
 SETUP_COMMIT=$(git rev-parse origin/main)
 sudo env IMAGE_NAMESPACE=gasbugs IMAGE_TAG="sha-$SETUP_COMMIT" \
-  LAB_SETUP_REPO_RAW_URL="https://raw.githubusercontent.com/gasbugs/lal/$SETUP_COMMIT" \
+  LAB_SETUP_REPO_RAW_URL="https://raw.githubusercontent.com/gasbugs/owasp-llm-application-security-lab/$SETUP_COMMIT" \
   bash infrastructure/scripts/student/install-lab.sh
 
 TRIALS=5 bash tests/e2e/run-full-cycle.sh

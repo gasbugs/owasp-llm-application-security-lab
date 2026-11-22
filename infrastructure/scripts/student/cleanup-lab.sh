@@ -15,7 +15,7 @@ set -euo pipefail
 
 if [ "$(id -u)" -ne 0 ]; then
   echo "이 스크립트는 root 권한이 필요합니다."
-  echo "  curl -fsSL https://raw.githubusercontent.com/gasbugs/lal/main/infrastructure/scripts/student/cleanup-lab.sh | sudo bash"
+  echo "  curl -fsSL https://raw.githubusercontent.com/gasbugs/owasp-llm-application-security-lab/main/infrastructure/scripts/student/cleanup-lab.sh | sudo bash"
   exit 1
 fi
 

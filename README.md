@@ -4,7 +4,7 @@ English · [한국어](README.ko.md)
 
 LAL maintains the infrastructure, container runtime, installation scripts, and verification tools used in the OWASP Top 10 for LLM Applications labs. The repository supports the AWS GPU-based OWASP practice environment, Bedrock-based guardrails and observability, and the mission services used by the LLM Defense Lab (LDL) Control Center.
 
-The [course repository](https://github.com/gasbugs/owasp-top-10-for-llm) contains the learner-facing notes. The [LDL Terraform repository](https://github.com/gasbugs/ldl) deploys the dedicated LDL EC2 instance and installs the runtime from a pinned commit of this repository.
+The [course repository](https://github.com/gasbugs/owasp-top-10-for-llm) contains the learner-facing notes. The [LDL Terraform repository](https://github.com/gasbugs/llm-defense-lab) deploys the dedicated LDL EC2 instance and installs the runtime from a pinned commit of this repository.
 
 > Some lab applications are intentionally vulnerable. Run them in an authorized, isolated practice environment.
 
@@ -15,7 +15,7 @@ The [course repository](https://github.com/gasbugs/owasp-top-10-for-llm) contain
 | AWS GPU lab for OWASP Top 10 practice | [Student quickstart](docs/STUDENT-QUICKSTART.md) |
 | Amazon Bedrock API practice | [Bedrock API lab](bedrock-api-lab/) |
 | NeMo Guardrails and Presidio on WSL | [Guardrails setup](docs/GUARDRAILS-SETUP.md) |
-| LDL mission environment on dedicated AWS EC2 | [LDL deployment](https://github.com/gasbugs/ldl) |
+| LDL mission environment on dedicated AWS EC2 | [LDL deployment](https://github.com/gasbugs/llm-defense-lab) |
 
 For the GPU path, Terraform provisions a single on-demand GPU instance in the learner's AWS account. The quickstart covers AWS account checks, the learner's public IPv4 allowlist, installation, and daily start and stop procedures. The Bedrock and WSL paths use their own setup instructions.
 

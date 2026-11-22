@@ -98,14 +98,14 @@ sudo -u ubuntu docker inspect \
 SSM 세션 안에서 실행합니다. 기본 클린업은 Compose 컨테이너만 제거하고 작업물과 모델 캐시는 보존합니다.
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/gasbugs/lal/main/infrastructure/scripts/student/cleanup-lab.sh | sudo bash
-curl -fsSL https://raw.githubusercontent.com/gasbugs/lal/main/infrastructure/scripts/student/install-lab.sh | sudo bash
+curl -fsSL https://raw.githubusercontent.com/gasbugs/owasp-llm-application-security-lab/main/infrastructure/scripts/student/cleanup-lab.sh | sudo bash
+curl -fsSL https://raw.githubusercontent.com/gasbugs/owasp-llm-application-security-lab/main/infrastructure/scripts/student/install-lab.sh | sudo bash
 ```
 
 모델 캐시까지 모두 지우는 완전 정리는 아래처럼 실행합니다.
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/gasbugs/lal/main/infrastructure/scripts/student/cleanup-lab.sh | sudo bash -s -- --purge
+curl -fsSL https://raw.githubusercontent.com/gasbugs/owasp-llm-application-security-lab/main/infrastructure/scripts/student/cleanup-lab.sh | sudo bash -s -- --purge
 ```
 
 ## GPU 인식 실패

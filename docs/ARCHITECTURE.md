@@ -84,7 +84,7 @@ allowed_ingress_cidr = "127.0.0.1/32"
 3. 수강생이 `install-lab.sh`를 직접 실행합니다.
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/gasbugs/lal/main/infrastructure/scripts/student/install-lab.sh | sudo bash
+curl -fsSL https://raw.githubusercontent.com/gasbugs/owasp-llm-application-security-lab/main/infrastructure/scripts/student/install-lab.sh | sudo bash
 ```
 
 `infrastructure/scripts/student/install-lab.sh`의 핵심 작업은 다음과 같습니다.
@@ -194,6 +194,6 @@ IMAGE_NAMESPACE=your-github-id TAG="sha-$(git rev-parse HEAD)" ./build-and-push.
 기본 설치 스크립트는 공개 `ghcr.io/gasbugs/...` 이미지를 인증 없이 pull합니다. 별도 GHCR namespace를 쓰려면 `install-lab.sh` 실행 시 환경변수로 조정하세요.
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/gasbugs/lal/main/infrastructure/scripts/student/install-lab.sh \
+curl -fsSL https://raw.githubusercontent.com/gasbugs/owasp-llm-application-security-lab/main/infrastructure/scripts/student/install-lab.sh \
   | sudo IMAGE_NAMESPACE=your-github-id bash
 ```

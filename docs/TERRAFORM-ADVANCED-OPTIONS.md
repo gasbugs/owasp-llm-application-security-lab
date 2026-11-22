@@ -32,7 +32,7 @@ enable_user_data_bootstrap = true
 강사용 실측은 setup source와 runtime image를 같은 40자리 commit으로 고정한다. 이 값은 최초 `terraform apply` 전에 확정해야 하며 기존 인스턴스의 user-data를 다시 실행하지 않는다.
 
 ```hcl
-lab_setup_repo_raw_url = "https://raw.githubusercontent.com/gasbugs/lal/0123456789abcdef0123456789abcdef01234567"
+lab_setup_repo_raw_url = "https://raw.githubusercontent.com/gasbugs/owasp-llm-application-security-lab/0123456789abcdef0123456789abcdef01234567"
 lab_image_namespace    = "gasbugs"
 lab_image_tag          = "sha-0123456789abcdef0123456789abcdef01234567"
 ```
