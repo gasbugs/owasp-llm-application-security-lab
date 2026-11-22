@@ -13,6 +13,8 @@ class Llm03ToolsImageTests(unittest.TestCase):
             "635cdd5fcc5bdeb8ec2e108bb2a40acf62d9039b",
             dockerfile,
         )
+        self.assertIn("-DLLAMA_BUILD_UI=OFF", dockerfile)
+        self.assertIn("-DLLAMA_USE_PREBUILT_UI=OFF", dockerfile)
         self.assertIn('org.opencontainers.image.title="lal-llama-cpp-tools"', dockerfile)
         self.assertIn("org.opencontainers.image.licenses=\"MIT\"", dockerfile)
         self.assertIn(
