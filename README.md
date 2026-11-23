@@ -13,7 +13,7 @@ The [course repository](https://github.com/gasbugs/owasp-top-10-for-llm) contain
 | Environment | Where to start |
 | --- | --- |
 | AWS GPU lab for OWASP Top 10 practice | [Student quickstart](docs/STUDENT-QUICKSTART.md) |
-| Amazon Bedrock API practice | [Bedrock API lab](bedrock-api-lab/) |
+| Amazon Bedrock API practice | [LDL Bedrock API lab](https://github.com/gasbugs/llm-defense-lab/tree/main/bedrock-api-lab) |
 | NeMo Guardrails and Presidio on WSL | [Guardrails setup](docs/GUARDRAILS-SETUP.md) |
 | LDL mission environment on dedicated AWS EC2 | [LDL deployment](https://github.com/gasbugs/llm-defense-lab) |
 
